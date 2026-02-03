@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
-project(fices VERSION 0.0.1 LANGUAGES CXX)
+project(fices VERSION 0.0.1)
 set(CMAKE_CXX_STANDARD 20)
 
-file(GLOB_RECURSE sources sources/*.cpp)
+file(GLOB_RECURSE sources sources/*.c sources/*.cpp)
 
 add_executable(${PROJECT_NAME} main.cpp ${sources})
 
@@ -22,4 +22,5 @@ target_link_libraries(${PROJECT_NAME}
         spdlog::spdlog
         SDL3::SDL3
         glm::glm
+        glfw
 )
