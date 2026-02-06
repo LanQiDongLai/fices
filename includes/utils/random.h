@@ -8,6 +8,9 @@ class Random {
  public:
   Random(int64_t seed);
   float getFloat();
+  int getInt();
+  float perlinNoise(float x, float y);
+  float flatNoise(float x, float y);
  private:
   int64_t seed_;
   std::mt19937 random_engine_;
