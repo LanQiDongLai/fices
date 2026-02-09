@@ -11,9 +11,7 @@ class Player {
     auto* registry = context->getRegistry();
     id_ = registry->create();
     registry->emplace<Tag>(id_, "player"_hs, "player");
-    Transform transform{.x = 0, .y = 0, .z = 0};
     registry->emplace<Transform>(id_, transform);
-    Camera camera{.far = 1000., .near = 1., .fov = 40.};
     registry->emplace<Camera>(id_, camera);
   }
   entt::entity getEntity() { return id_; }

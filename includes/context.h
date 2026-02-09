@@ -11,6 +11,7 @@ class Context {
 
   entt::registry* getRegistry();
   entt::dispatcher* getDispatcher();
+  Window* getWindow();
 
  private:
   Window* window_;
