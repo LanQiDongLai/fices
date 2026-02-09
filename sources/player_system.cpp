@@ -3,7 +3,7 @@
 PlayerSystem::PlayerSystem(Context* context) { context_ = context; }
 
 void PlayerSystem::initialize() {
-  context_->getDispatcher()->sink<MoveEvent>().connect<onMove>(this);
+  context_->getDispatcher()->sink<MoveEvent>().connect<&PlayerSystem::onMove>(this);
 }
 
 void PlayerSystem::update(double delta_time) {}

@@ -2,11 +2,13 @@
 
 ChunkSystem::ChunkSystem(Context* context) { context_ = context; }
 
-void ChunkSystem::initialize() {}
+void ChunkSystem::initialize() {
+  context_->getDispatcher()->sink<ChunkGenerateEvent>().connect<&ChunkSystem::onGenerateChunk>(this);
+}
 
 void ChunkSystem::update(double delta_time) {}
 
-void ChunkSystem::onGenerateChunk(float x, float y) {
+void ChunkSystem::onGenerateChunk(ChunkGenerateEvent event) {
   ChunkBlockSet block_set;
   for (int i = 0; i < 256; i++) {
     for (int j = 0; j < 16; j++) {

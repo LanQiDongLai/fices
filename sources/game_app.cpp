@@ -10,6 +10,8 @@ GameApp::GameApp() {
   render_system_ = new RenderSystem(context_);
   input_system_ = new InputSystem(context_);
   chunk_system_ = new ChunkSystem(context_);
+  player_system_ = new PlayerSystem(context_);
+  debug_system_ = new DebugSystem(context_);
 
   scene_ = new GameScene(context_);
 
@@ -21,6 +23,8 @@ void GameApp::initialize() {
       ->sink<GameQuitEvent>()
       .connect<&GameApp::onCloseWindow>(this);
   render_system_->initialize();
+  player_system_->initialize();
+  chunk_system_->initialize();
 }
 
 void GameApp::run() {
@@ -34,9 +38,15 @@ void GameApp::update() {
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
       current - last_frame_time_);
   last_frame_time_ = current;
+
   render_system_->update(duration.count());
   input_system_->update(duration.count());
+  player_system_->update(duration.count());
+  chunk_system_->update(duration.count());
+  debug_system_->update(duration.count());
+
   scene_->update(duration.count());
+
   context_->getDispatcher()->update();
   context_->getWindow()->present();
 }

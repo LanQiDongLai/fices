@@ -7,6 +7,9 @@
 #include "context.h"
 #include "entities/chunk.h"
 
+#include "events/chunk_generate_event.h"
+#include "events/chunk_remove_event.h"
+
 struct MeshData {
   std::vector<float> points;
   std::vector<float> uv;
@@ -20,7 +23,7 @@ class ChunkSystem {
   void update(double delta_time);
 
  private:
-  void onGenerateChunk(float x, float y);
+  void onGenerateChunk(ChunkGenerateEvent event);
   Mesh generateMesh();
   Mesh combineToMesh(const MeshData& mesh_data);
 
