@@ -19,13 +19,13 @@ void PlayerSystem::onMove(MoveEvent event) {
     }
     Transform& transform = view.get<Transform>(entity);
     if (event.direction == MoveEvent::Direction::LEFT) {
-      transform.x -= 10.f;
+      transform.x -= 0.3f;
     } else if (event.direction == MoveEvent::Direction::RIGHT) {
-      transform.x += 10.f;
+      transform.x += 0.3f;
     } else if (event.direction == MoveEvent::Direction::UP) {
-      transform.z -= 10.f;
+      transform.z -= 0.3f;
     } else if (event.direction == MoveEvent::Direction::DOWN) {
-      transform.z += 10.f;
+      transform.z += 0.3f;
     }
   }
 }

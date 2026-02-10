@@ -1,6 +1,7 @@
 #pragma once
 #include <glad/glad.h>
 #include <vector>
+#include <spdlog/spdlog.h>
 
 #include "components/chunk_block_set.h"
 #include "components/mesh.h"
@@ -24,7 +25,7 @@ class ChunkSystem {
 
  private:
   void onGenerateChunk(ChunkGenerateEvent event);
-  Mesh generateMesh();
+  Mesh generateMesh(ChunkBlockSet& block_set);
   Mesh combineToMesh(const MeshData& mesh_data);
 
   void addFrontFace(MeshData* mesh_data, float x, float y, float z,

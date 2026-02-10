@@ -30,6 +30,8 @@ fices::Shader::Shader(std::string_view vertex_shader_path,
 
   vertex_shader_path_ = vertex_shader_path;
   fragment_shader_path_ = fragment_shader_path;
+
+  compileShader();
 }
 
 void fices::Shader::compileShader() {
