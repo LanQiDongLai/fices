@@ -1,7 +1,11 @@
 #pragma once
 #include "context.h"
 
+#include <spdlog/spdlog.h>
+
 #include "events/move_event.h"
+#include "events/eye_move_event.h"
+
 #include "components/camera.h"
 #include "components/tag.h"
 #include "components/transform.h"
@@ -14,5 +18,6 @@ class PlayerSystem {
 
  private:
   void onMove(MoveEvent event);
+  void onEyeMove(EyeMoveEvent event);
   Context* context_;
 };

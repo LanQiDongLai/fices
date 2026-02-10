@@ -1,6 +1,8 @@
 #pragma once
 #include "context.h"
 
+#include <spdlog/spdlog.h>
+
 class InputSystem {
  public:
   InputSystem(Context* context);
@@ -8,4 +10,7 @@ class InputSystem {
 
  private:
   Context* context_;
+  bool first_mouse_;
+  bool last_mouse_x_;
+  bool last_mouse_y_;
 };

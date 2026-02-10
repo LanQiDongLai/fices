@@ -26,9 +26,13 @@ void RenderSystem::update(double delta_time) {
     glm::mat4 projection =
         glm::perspective(glm::radians(camera.fov), (float)800 / (float)800,
                          camera.near, camera.far);
+    glm::vec3 front;
+    front.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
+    front.y = sin(glm::radians(camera.pitch));
+    front.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
     glm::mat4 view =
         glm::lookAt(glm::vec3(transform.x, transform.y, transform.z),
-                    glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+                    glm::vec3(transform.x, transform.y, transform.z) + front, glm::vec3(0.0f, 1.0f, 0.0f));
     shader_->setUniformMatrix4f("projection", projection);
     shader_->setUniformMatrix4f("view", view);
   }

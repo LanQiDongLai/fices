@@ -17,6 +17,11 @@ Window::Window(int width, int height, std::string_view title) {
   is_running_ = true;
   SDL_GL_MakeCurrent(window_, context_);
   SDL_ShowWindow(window_);
+
+  SDL_SetWindowRelativeMouseMode(window_, true);
+  SDL_SetWindowMouseGrab(window_, true);
+  SDL_HideCursor();
+  SDL_WarpMouseInWindow(window_, 100, 100);
 }
 
 Window::~Window() {
