@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 
 #include "utils/shader.h"
+#include "utils/texture.h"
 
 #include "components/camera.h"
 #include "components/mesh.h"
@@ -18,4 +19,5 @@ class RenderSystem {
  private:
   Context *context_;
   fices::Shader* shader_;
+  fices::Texture* block_textures_;
 };

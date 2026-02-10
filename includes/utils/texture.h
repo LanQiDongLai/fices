@@ -1,9 +1,10 @@
 #pragma once
 #include <glad/glad.h>
+#include <spdlog/spdlog.h>
 
 #include <string_view>
 
-namespace fcies {
+namespace fices {
 
 class Texture {
  public:
@@ -14,6 +15,7 @@ class Texture {
   void unBind();
   int getWidth();
   int getHeight();
+  int getChannels();
   int getTextureID();
 
  private:
@@ -23,4 +25,4 @@ class Texture {
   int channels_;
 };
 
-}  // namespace fcies
+}  // namespace fices

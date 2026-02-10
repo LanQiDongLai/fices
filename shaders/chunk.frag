@@ -1,5 +1,10 @@
 #version 460 core
+in vec2 uv;
+
 out vec4 FragColor;
+
+layout(binding = 0) uniform sampler2D block_textures;
+
 void main() {
-  FragColor = vec4(0.0, 1.0, 0.149, 1.0);
+  FragColor = texture(block_textures, vec2(uv.x / 4.f, uv.y / 4.f));
 }

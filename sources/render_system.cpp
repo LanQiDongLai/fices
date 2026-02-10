@@ -7,6 +7,9 @@ void RenderSystem::initialize() {
   glEnable(GL_DEPTH_TEST);
   glViewport(0, 0, 800, 800);
   shader_ = new fices::Shader("shaders/chunk.vert", "shaders/chunk.frag");
+  block_textures_ = new fices::Texture("resources/images/blocks.png");
+  spdlog::info("texture w:{} h:{} c:{}", block_textures_->getWidth(),
+               block_textures_->getHeight(), block_textures_->getChannels());
 }
 
 void RenderSystem::update(double delta_time) {
@@ -23,13 +26,16 @@ void RenderSystem::update(double delta_time) {
     glm::mat4 projection =
         glm::perspective(glm::radians(camera.fov), (float)800 / (float)800,
                          camera.near, camera.far);
-    glm::mat4 view = glm::lookAt(glm::vec3(transform.x, transform.y, transform.z), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+    glm::mat4 view =
+        glm::lookAt(glm::vec3(transform.x, transform.y, transform.z),
+                    glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
     shader_->setUniformMatrix4f("projection", projection);
     shader_->setUniformMatrix4f("view", view);
   }
   for (auto entity : mesh_view) {
     Mesh& mesh = mesh_view.get<Mesh>(entity);
     shader_->use();
+    block_textures_->bind(0);
     glBindVertexArray(mesh.VAO);
     glDrawArrays(GL_TRIANGLES, 0, mesh.triangle_count);
   }

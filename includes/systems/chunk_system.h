@@ -1,13 +1,13 @@
 #pragma once
 #include <glad/glad.h>
-#include <vector>
 #include <spdlog/spdlog.h>
+
+#include <vector>
 
 #include "components/chunk_block_set.h"
 #include "components/mesh.h"
 #include "context.h"
 #include "entities/chunk.h"
-
 #include "events/chunk_generate_event.h"
 #include "events/chunk_remove_event.h"
 
@@ -29,17 +29,17 @@ class ChunkSystem {
   Mesh combineToMesh(const MeshData& mesh_data);
 
   void addFrontFace(MeshData* mesh_data, float x, float y, float z,
-                    Block::BlockType type);
+                    float texture_offset_x, float texture_offset_y);
   void addBehindFace(MeshData* mesh_data, float x, float y, float z,
-                     Block::BlockType type);
+                     float texture_offset_x, float texture_offset_y);
   void addLeftFace(MeshData* mesh_data, float x, float y, float z,
-                   Block::BlockType type);
+                   float texture_offset_x, float texture_offset_y);
   void addRightFace(MeshData* mesh_data, float x, float y, float z,
-                    Block::BlockType type);
+                    float texture_offset_x, float texture_offset_y);
   void addTopFace(MeshData* mesh_data, float x, float y, float z,
-                  Block::BlockType type);
+                  float texture_offset_x, float texture_offset_y);
   void addBottomFace(MeshData* mesh_data, float x, float y, float z,
-                     Block::BlockType type);
-
+                     float texture_offset_x, float texture_offset_y);
+  std::pair<float, float> findTypeUV(Block::BlockType type);
   Context* context_;
 };
