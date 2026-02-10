@@ -35,43 +35,40 @@ void ChunkSystem::onGenerateChunk(ChunkGenerateEvent event) {
 
 Mesh ChunkSystem::generateMesh(ChunkBlockSet& block_set) {
   MeshData mesh_data;
-  for (int i = 0; i < 256; i++) {
-    for (int j = 0; j < 16; j++) {
-      for (int k = 0; k < 16; k++) {
+  for (int i = 0; i < 256; i++) { // y
+    for (int j = 0; j < 16; j++) {  // z
+      for (int k = 0; k < 16; k++) {  // x
         Block::BlockType type = block_set.blocks[i][j][k].block_type;
         if (type == Block::BlockType::AIR) {
           continue;
         }
         if (k == 0 ||
             block_set.blocks[i][j][k - 1].block_type == Block::BlockType::AIR) {
-          addLeftFace(&mesh_data, k, j, i, type);
+          addLeftFace(&mesh_data, k, i, j, type);
         }
         if (j == 0 ||
             block_set.blocks[i][j - 1][k].block_type == Block::BlockType::AIR) {
-          addBehindFace(&mesh_data, k, j, i, type);
+          addBehindFace(&mesh_data, k, i, j, type);
         }
         if (i == 0 ||
             block_set.blocks[i - 1][j][k].block_type == Block::BlockType::AIR) {
-          addBottomFace(&mesh_data, k, j, i, type);
+          addBottomFace(&mesh_data, k, i, j, type);
         }
         if (k == 15 ||
             block_set.blocks[i][j][k + 1].block_type == Block::BlockType::AIR) {
-          addRightFace(&mesh_data, k, j, i, type);
+          addRightFace(&mesh_data, k, i, j, type);
         }
         if (j == 15 ||
             block_set.blocks[i][j + 1][k].block_type == Block::BlockType::AIR) {
-          addFrontFace(&mesh_data, k, j, i, type);
+          addFrontFace(&mesh_data, k, i, j, type);
         }
         if (i == 255 ||
             block_set.blocks[i + 1][j][k].block_type == Block::BlockType::AIR) {
-          addTopFace(&mesh_data, k, j, i, type);
+          addTopFace(&mesh_data, k, i, j, type);
         }
       }
     }
   }
-  spdlog::info("Mesh Points:{}", mesh_data.points.size());
-  spdlog::info("Mesh UV:{}", mesh_data.uv.size());
-  spdlog::info("Mesh Normal:{}", mesh_data.normal.size());
 
   return combineToMesh(mesh_data);
 }
