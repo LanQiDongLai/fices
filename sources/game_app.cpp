@@ -3,7 +3,7 @@
 GameApp::GameApp() {
   entt::dispatcher* dispatcher = new entt::dispatcher;
   entt::registry* registry = new entt::registry;
-  Window* window = new Window(800, 800, "SpaceWar");
+  Window* window = new Window(800, 800, "Fices");
   context_ = new Context(window, registry, dispatcher);
   is_running_ = true;
 

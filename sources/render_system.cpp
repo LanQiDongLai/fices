@@ -10,8 +10,8 @@ void RenderSystem::initialize() {
 }
 
 void RenderSystem::update(double delta_time) {
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glClearColor(0.f, 0.72f, 0.97f, 1.f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   auto* registry = context_->getRegistry();
   auto mesh_view = registry->view<Mesh>();
   auto camera_view = registry->view<Camera, Transform>();
@@ -24,8 +24,8 @@ void RenderSystem::update(double delta_time) {
         glm::perspective(glm::radians(camera.fov), (float)800 / (float)800,
                          camera.near, camera.far);
     glm::mat4 view = glm::lookAt(glm::vec3(transform.x, transform.y, transform.z), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
-    shader_->setUniformMatrix4f("projection", projection);
-    shader_->setUniformMatrix4f("view", view);
+    // shader_->setUniformMatrix4f("projection", projection);
+    // shader_->setUniformMatrix4f("view", view);
   }
   for (auto entity : mesh_view) {
     Mesh& mesh = mesh_view.get<Mesh>(entity);

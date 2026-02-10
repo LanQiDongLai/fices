@@ -11,7 +11,7 @@ fices::Shader::Shader(std::string_view vertex_shader_path,
   fragment_file.exceptions(std::ifstream::badbit | std::ifstream::failbit);
 
   vertex_file.open(vertex_shader_path.data(), std::ios::in);
-  fragment_file.open(vertex_shader_path.data(), std::ios::in);
+  fragment_file.open(fragment_shader_path.data(), std::ios::in);
 
   if (!vertex_file.good()) {
     spdlog::error("File {} is not good", vertex_shader_path);
@@ -47,7 +47,7 @@ void fices::Shader::compileShader() {
   const char* fragment_shader_content = fragment_shader_.c_str();
 
   glShaderSource(vertex_shader_id, 1, &vertex_shader_content, nullptr);
-  glShaderSource(vertex_shader_id, 1, &fragment_shader_content, nullptr);
+  glShaderSource(fragment_shader_id, 1, &fragment_shader_content, nullptr);
 
   glCompileShader(vertex_shader_id);
   glGetShaderiv(vertex_shader_id, GL_COMPILE_STATUS, &successful);
