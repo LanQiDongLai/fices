@@ -48,7 +48,7 @@ Mesh ChunkSystem::generateMesh(ChunkBlockSet& block_set) {
         }
         if (j == 0 ||
             block_set.blocks[i][j - 1][k].block_type == Block::BlockType::AIR) {
-          addBehindFace(&mesh_data, k, i, j, type);
+          addFrontFace(&mesh_data, k, i, j, type);
         }
         if (i == 0 ||
             block_set.blocks[i - 1][j][k].block_type == Block::BlockType::AIR) {
@@ -60,7 +60,7 @@ Mesh ChunkSystem::generateMesh(ChunkBlockSet& block_set) {
         }
         if (j == 15 ||
             block_set.blocks[i][j + 1][k].block_type == Block::BlockType::AIR) {
-          addFrontFace(&mesh_data, k, i, j, type);
+          addBehindFace(&mesh_data, k, i, j, type);
         }
         if (i == 255 ||
             block_set.blocks[i + 1][j][k].block_type == Block::BlockType::AIR) {
@@ -113,50 +113,26 @@ Mesh ChunkSystem::combineToMesh(const MeshData& mesh_data) {
 
 void ChunkSystem::addFrontFace(MeshData* mesh_data, float x, float y, float z,
                                Block::BlockType type) {
+  // right-top
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(-1.f);
+
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
   // left-top
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(-1.f);
 
-  mesh_data->points.push_back(x - 0.5f);
-  mesh_data->points.push_back(y + 0.5f);
-  mesh_data->points.push_back(z - 0.5f);
-
-  mesh_data->uv.push_back(0.f);
-  mesh_data->uv.push_back(0.f);
-
-  // right-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-
-  mesh_data->points.push_back(x + 0.5f);
-  mesh_data->points.push_back(y + 0.5f);
-  mesh_data->points.push_back(z - 0.5f);
-
-  mesh_data->uv.push_back(0.f);
-  mesh_data->uv.push_back(0.f);
-
-  // left-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-
-  mesh_data->points.push_back(x - 0.5f);
-  mesh_data->points.push_back(y - 0.5f);
-  mesh_data->points.push_back(z - 0.5f);
-
-  mesh_data->uv.push_back(0.f);
-  mesh_data->uv.push_back(0.f);
-
-  // right-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-
-  mesh_data->points.push_back(x + 0.5f);
-  mesh_data->points.push_back(y + 0.5f);
-  mesh_data->points.push_back(z - 0.5f);
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
@@ -166,9 +142,21 @@ void ChunkSystem::addFrontFace(MeshData* mesh_data, float x, float y, float z,
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(-1.f);
 
-  mesh_data->points.push_back(x + 0.5f);
-  mesh_data->points.push_back(y - 0.5f);
-  mesh_data->points.push_back(z - 0.5f);
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // left-top
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(-1.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
@@ -178,9 +166,21 @@ void ChunkSystem::addFrontFace(MeshData* mesh_data, float x, float y, float z,
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(-1.f);
 
-  mesh_data->points.push_back(x - 0.5f);
-  mesh_data->points.push_back(y - 0.5f);
-  mesh_data->points.push_back(z - 0.5f);
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // right-bottom
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(-1.f);
+
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
@@ -193,9 +193,9 @@ void ChunkSystem::addBehindFace(MeshData* mesh_data, float x, float y, float z,
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(1.f);
 
-  mesh_data->points.push_back(x - 0.5f);
-  mesh_data->points.push_back(y + 0.5f);
-  mesh_data->points.push_back(z + 0.5f);
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z + 1.f);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
@@ -205,9 +205,9 @@ void ChunkSystem::addBehindFace(MeshData* mesh_data, float x, float y, float z,
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(1.f);
 
-  mesh_data->points.push_back(x - 0.5f);
-  mesh_data->points.push_back(y - 0.5f);
-  mesh_data->points.push_back(z + 0.5f);
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z + 1.f);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
@@ -217,9 +217,9 @@ void ChunkSystem::addBehindFace(MeshData* mesh_data, float x, float y, float z,
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(1.f);
 
-  mesh_data->points.push_back(x + 0.5f);
-  mesh_data->points.push_back(y + 0.5f);
-  mesh_data->points.push_back(z + 0.5f);
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z + 1.f);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
@@ -229,9 +229,9 @@ void ChunkSystem::addBehindFace(MeshData* mesh_data, float x, float y, float z,
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(1.f);
 
-  mesh_data->points.push_back(x - 0.5f);
-  mesh_data->points.push_back(y - 0.5f);
-  mesh_data->points.push_back(z + 0.5f);
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z + 1.f);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
@@ -241,9 +241,9 @@ void ChunkSystem::addBehindFace(MeshData* mesh_data, float x, float y, float z,
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(1.f);
 
-  mesh_data->points.push_back(x + 0.5f);
-  mesh_data->points.push_back(y - 0.5f);
-  mesh_data->points.push_back(z + 0.5f);
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z + 1.f);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
@@ -253,9 +253,9 @@ void ChunkSystem::addBehindFace(MeshData* mesh_data, float x, float y, float z,
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(1.f);
 
-  mesh_data->points.push_back(x + 0.5f);
-  mesh_data->points.push_back(y + 0.5f);
-  mesh_data->points.push_back(z + 0.5f);
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z + 1.f);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
@@ -268,79 +268,295 @@ void ChunkSystem::addLeftFace(MeshData* mesh_data, float x, float y, float z,
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(0.f);
 
-  mesh_data->points.push_back(x - 0.5f);
-  mesh_data->points.push_back(y + 0.5f);
-  mesh_data->points.push_back(z + 0.5f);
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z + 1.f);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
 
   // left-bottom
+  mesh_data->normal.push_back(-1.f);
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
 
-  mesh_data->points.push_back(x - 0.5f);
-  mesh_data->points.push_back(y - 0.5f);
-  mesh_data->points.push_back(z + 0.5f);
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z + 1.f);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
 
   // right-top
+  mesh_data->normal.push_back(-1.f);
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
 
-  mesh_data->points.push_back(x + 0.5f);
-  mesh_data->points.push_back(y + 0.5f);
-  mesh_data->points.push_back(z - 0.5f);
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
 
   // left-bottom
+  mesh_data->normal.push_back(-1.f);
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
 
-  mesh_data->points.push_back(x - 0.5f);
-  mesh_data->points.push_back(y - 0.5f);
-  mesh_data->points.push_back(z + 0.5f);
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z + 1.f);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
 
   // right-bottom
+  mesh_data->normal.push_back(-1.f);
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
 
-  mesh_data->points.push_back(x + 0.5f);
-  mesh_data->points.push_back(y - 0.5f);
-  mesh_data->points.push_back(z + 0.5f);
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
 
   // right-top
+  mesh_data->normal.push_back(-1.f);
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
 
-  mesh_data->points.push_back(x + 0.5f);
-  mesh_data->points.push_back(y + 0.5f);
-  mesh_data->points.push_back(z + 0.5f);
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z);
 
   mesh_data->uv.push_back(0.f);
   mesh_data->uv.push_back(0.f);
 }
 
 void ChunkSystem::addRightFace(MeshData* mesh_data, float x, float y, float z,
-                               Block::BlockType type) {}
+                               Block::BlockType type) {
+  // left-top
+  mesh_data->normal.push_back(1.f);
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z + 1.f);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // left-bottom
+  mesh_data->normal.push_back(1.f);
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z + 1.f);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // right-top
+  mesh_data->normal.push_back(1.f);
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // left-bottom
+  mesh_data->normal.push_back(1.f);
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z + 1.f);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // right-bottom
+  mesh_data->normal.push_back(1.f);
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // right-top
+  mesh_data->normal.push_back(1.f);
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+}
 
 void ChunkSystem::addTopFace(MeshData* mesh_data, float x, float y, float z,
-                             Block::BlockType type) {}
+                             Block::BlockType type) {
+  // left-top
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(1.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // left-bottom
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(1.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z + 1.f);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // right-top
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(1.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // left-bottom
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(1.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z + 1.f);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // right-bottom
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(1.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z + 1.f);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // right-top
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(1.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y + 1.f);
+  mesh_data->points.push_back(z);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+}
 
 void ChunkSystem::addBottomFace(MeshData* mesh_data, float x, float y, float z,
-                                Block::BlockType type) {}
+                                Block::BlockType type) {
+  // left-top
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(-1.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z + 1.f);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // left-bottom
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(-1.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // right-top
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(-1.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z + 1.f);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // left-bottom
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(-1.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // right-bottom
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(-1.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+
+  // right-top
+  mesh_data->normal.push_back(0.f);
+  mesh_data->normal.push_back(-1.f);
+  mesh_data->normal.push_back(0.f);
+
+  mesh_data->points.push_back(x + 1.f);
+  mesh_data->points.push_back(y);
+  mesh_data->points.push_back(z + 1.f);
+
+  mesh_data->uv.push_back(0.f);
+  mesh_data->uv.push_back(0.f);
+}
