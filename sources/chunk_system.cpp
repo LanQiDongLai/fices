@@ -69,6 +69,10 @@ Mesh ChunkSystem::generateMesh(ChunkBlockSet& block_set) {
       }
     }
   }
+  spdlog::info("Mesh Points:{}", mesh_data.points.size());
+  spdlog::info("Mesh UV:{}", mesh_data.uv.size());
+  spdlog::info("Mesh Normal:{}", mesh_data.normal.size());
+
   return combineToMesh(mesh_data);
 }
 
@@ -80,6 +84,11 @@ Mesh ChunkSystem::combineToMesh(const MeshData& mesh_data) {
   glBindVertexArray(VAO);
 
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  glBufferData(GL_ARRAY_BUFFER,
+               mesh_data.points.size() * sizeof(float) +
+                   mesh_data.uv.size() * sizeof(float) +
+                   mesh_data.normal.size() * sizeof(float),
+               nullptr, GL_STATIC_DRAW);
   glBufferSubData(GL_ARRAY_BUFFER, 0, mesh_data.points.size() * sizeof(float),
                   mesh_data.points.data());
   glBufferSubData(GL_ARRAY_BUFFER, mesh_data.points.size() * sizeof(float),
