@@ -1,6 +1,9 @@
 #include "systems/chunk_system.h"
 
-ChunkSystem::ChunkSystem(Context* context) { context_ = context; }
+ChunkSystem::ChunkSystem(Context* context) {
+  random_ = new fices::Random(123);
+  context_ = context;
+}
 
 void ChunkSystem::initialize() {
   context_->getDispatcher()
@@ -8,35 +11,58 @@ void ChunkSystem::initialize() {
       .connect<&ChunkSystem::onGenerateChunk>(this);
   ChunkGenerateEvent event;
   event.chunk_x = 0;
-  event.chunk_y = 0;
-  onGenerateChunk(event);
+  event.chunk_z = 0;
+  for(int i = 0; i < 8; i++) {
+    for(int j = 0; j < 8; j++) {
+      event.chunk_x = i;
+      event.chunk_z = j;
+      onGenerateChunk(event);
+    }
+  }
 }
 
 void ChunkSystem::update(double delta_time) {}
 
 void ChunkSystem::onGenerateChunk(ChunkGenerateEvent event) {
   ChunkBlockSet block_set;
-  for (int i = 0; i < 256; i++) {
-    for (int j = 0; j < 16; j++) {
-      for (int k = 0; k < 16; k++) {
+  for (int j = 0; j < 16; j++) {
+    for (int k = 0; k < 16; k++) {
+      float height =
+          random_->perlinNoise((event.chunk_x * 16 + j) / 16.f / 128.f, (event.chunk_z * 16 + k) / 16.f / 128.f) * 10 + 20.5;
+      for (int i = 0; i < 256; i++) {
         Block block;
-        if (i < 2)
-          block.block_type = Block::BlockType::DIRT;
-        else
+        if (i < height) {
+          block.block_type = Block::BlockType::STONE;
+        } else {
           block.block_type = Block::BlockType::AIR;
+        }
         block_set.blocks[i][j][k] = block;
       }
     }
   }
+  // for (int i = 0; i < 256; i++) {
+  //   for (int j = 0; j < 16; j++) {
+  //     for (int k = 0; k < 16; k++) {
+  //       Block block;
+  //       if (i < 20)
+  //         block.block_type = Block::BlockType::STONE;
+  //       else if(i < 50)
+  //         block.block_type = Block::BlockType::DIRT;
+  //       else
+  //         block.block_type = Block::BlockType::AIR;
+  //       block_set.blocks[i][j][k] = block;
+  //     }
+  //   }
+  // }
   Mesh mesh = generateMesh(block_set);
-  Transform transform{.x = 0, .y = 0, .z = 0};
+  Transform transform{.x = event.chunk_x * 16.f, .y = 0, .z = event.chunk_z * 16.f};
   Chunk(context_, block_set, transform, mesh);
 }
 
 Mesh ChunkSystem::generateMesh(ChunkBlockSet& block_set) {
   MeshData mesh_data;
-  for (int i = 0; i < 256; i++) { // y
-    for (int j = 0; j < 16; j++) {  // z
+  for (int i = 0; i < 256; i++) {     // y
+    for (int j = 0; j < 16; j++) {    // z
       for (int k = 0; k < 16; k++) {  // x
         Block::BlockType type = block_set.blocks[i][j][k].block_type;
         if (type == Block::BlockType::AIR) {
@@ -188,7 +214,8 @@ void ChunkSystem::addFrontFace(MeshData* mesh_data, float x, float y, float z,
 }
 
 void ChunkSystem::addBehindFace(MeshData* mesh_data, float x, float y, float z,
-                                float texture_offset_x, float texture_offset_y) {
+                                float texture_offset_x,
+                                float texture_offset_y) {
   // left-top
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(0.f);
@@ -271,7 +298,7 @@ void ChunkSystem::addLeftFace(MeshData* mesh_data, float x, float y, float z,
 
   mesh_data->points.push_back(x);
   mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z + 1.f);
+  mesh_data->points.push_back(z);
 
   mesh_data->uv.push_back(texture_offset_x + 0.f);
   mesh_data->uv.push_back(texture_offset_y + 1.f);
@@ -283,7 +310,7 @@ void ChunkSystem::addLeftFace(MeshData* mesh_data, float x, float y, float z,
 
   mesh_data->points.push_back(x);
   mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z + 1.f);
+  mesh_data->points.push_back(z);
 
   mesh_data->uv.push_back(texture_offset_x + 0.f);
   mesh_data->uv.push_back(texture_offset_y + 0.f);
@@ -295,7 +322,7 @@ void ChunkSystem::addLeftFace(MeshData* mesh_data, float x, float y, float z,
 
   mesh_data->points.push_back(x);
   mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z);
+  mesh_data->points.push_back(z + 1.f);
 
   mesh_data->uv.push_back(texture_offset_x + 1.f);
   mesh_data->uv.push_back(texture_offset_y + 1.f);
@@ -307,7 +334,7 @@ void ChunkSystem::addLeftFace(MeshData* mesh_data, float x, float y, float z,
 
   mesh_data->points.push_back(x);
   mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z + 1.f);
+  mesh_data->points.push_back(z);
 
   mesh_data->uv.push_back(texture_offset_x + 0.f);
   mesh_data->uv.push_back(texture_offset_y + 0.f);
@@ -319,7 +346,7 @@ void ChunkSystem::addLeftFace(MeshData* mesh_data, float x, float y, float z,
 
   mesh_data->points.push_back(x);
   mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z);
+  mesh_data->points.push_back(z + 1.f);
 
   mesh_data->uv.push_back(texture_offset_x + 1.f);
   mesh_data->uv.push_back(texture_offset_y + 0.f);
@@ -331,7 +358,7 @@ void ChunkSystem::addLeftFace(MeshData* mesh_data, float x, float y, float z,
 
   mesh_data->points.push_back(x);
   mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z);
+  mesh_data->points.push_back(z + 1.f);
 
   mesh_data->uv.push_back(texture_offset_x + 1.f);
   mesh_data->uv.push_back(texture_offset_y + 1.f);
@@ -488,7 +515,8 @@ void ChunkSystem::addTopFace(MeshData* mesh_data, float x, float y, float z,
 }
 
 void ChunkSystem::addBottomFace(MeshData* mesh_data, float x, float y, float z,
-                                float texture_offset_x, float texture_offset_y) {
+                                float texture_offset_x,
+                                float texture_offset_y) {
   // left-top
   mesh_data->normal.push_back(0.f);
   mesh_data->normal.push_back(-1.f);
@@ -563,13 +591,12 @@ void ChunkSystem::addBottomFace(MeshData* mesh_data, float x, float y, float z,
 }
 
 std::pair<float, float> ChunkSystem::findTypeUV(Block::BlockType type) {
-  switch (type)
-  {
-  case Block::BlockType::DIRT:
-    return {1.f, 3.f};
-  case Block::BlockType::STONE:
-    return {0.f, 3.f};
-  default:
-    return {0.f, 0.f};
+  switch (type) {
+    case Block::BlockType::DIRT:
+      return {1.f, 3.f};
+    case Block::BlockType::STONE:
+      return {0.f, 3.f};
+    default:
+      return {0.f, 0.f};
   }
 }

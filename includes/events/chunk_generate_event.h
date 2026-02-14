@@ -2,5 +2,5 @@
 
 struct ChunkGenerateEvent {
   int chunk_x;
-  int chunk_y;
+  int chunk_z;
 };

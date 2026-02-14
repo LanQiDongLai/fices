@@ -11,6 +11,8 @@
 #include "events/chunk_generate_event.h"
 #include "events/chunk_remove_event.h"
 
+#include "utils/random.h"
+
 struct MeshData {
   std::vector<float> points;
   std::vector<float> uv;
@@ -42,4 +44,5 @@ class ChunkSystem {
                      float texture_offset_x, float texture_offset_y);
   std::pair<float, float> findTypeUV(Block::BlockType type);
   Context* context_;
+  fices::Random* random_;
 };

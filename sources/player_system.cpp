@@ -36,7 +36,6 @@ void PlayerSystem::onMove(MoveEvent event) {
 }
 
 void PlayerSystem::onEyeMove(EyeMoveEvent event) {
-  spdlog::info("reviced eye move event");
   using namespace entt::literals;
   entt::registry* registry = context_->getRegistry();
   auto view = registry->view<Tag, Camera>();

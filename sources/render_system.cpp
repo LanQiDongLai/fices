@@ -5,18 +5,19 @@ RenderSystem::RenderSystem(Context* context) { context_ = context; }
 void RenderSystem::initialize() {
   gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
   glEnable(GL_DEPTH_TEST);
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
+  glFrontFace(GL_CCW);
   glViewport(0, 0, 800, 800);
   shader_ = new fices::Shader("shaders/chunk.vert", "shaders/chunk.frag");
   block_textures_ = new fices::Texture("resources/images/blocks.png");
-  spdlog::info("texture w:{} h:{} c:{}", block_textures_->getWidth(),
-               block_textures_->getHeight(), block_textures_->getChannels());
 }
 
 void RenderSystem::update(double delta_time) {
   glClearColor(0.f, 0.72f, 0.97f, 1.f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   auto* registry = context_->getRegistry();
-  auto mesh_view = registry->view<Mesh>();
+  auto mesh_view = registry->view<Mesh, Transform>();
   auto camera_view = registry->view<Camera, Transform>();
 
   for (auto entity : camera_view) {
@@ -38,6 +39,10 @@ void RenderSystem::update(double delta_time) {
   }
   for (auto entity : mesh_view) {
     Mesh& mesh = mesh_view.get<Mesh>(entity);
+    Transform& transform = mesh_view.get<Transform>(entity);
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(transform.x, transform.y, transform.z));
+    shader_->setUniformMatrix4f("model", model);
     shader_->use();
     block_textures_->bind(0);
     glBindVertexArray(mesh.VAO);

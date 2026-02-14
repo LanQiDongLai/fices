@@ -42,7 +42,6 @@ void InputSystem::update(double delta_time) {
         break;
       }
       case SDL_EVENT_MOUSE_MOTION: {
-        spdlog::info("motion.xrel:{} motion.yrel:{}", event.motion.xrel, event.motion.yrel);
         EyeMoveEvent eye_move_event;
         eye_move_event.yaw = event.motion.xrel * 0.05f;
         eye_move_event.pitch = -event.motion.yrel * 0.05f;
