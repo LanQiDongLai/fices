@@ -16,34 +16,34 @@ void InputSystem::update(double delta_time) {
   while (window->pollEvent(&event)) {
     switch (event.type) {
       case SDL_EVENT_QUIT:
-        dispatcher->enqueue<GameQuitEvent>();
+        dispatcher->trigger<GameQuitEvent>();
         break;
       case SDL_EVENT_KEY_DOWN: {
         MoveEvent player_move_event;
         if (event.key.scancode == SDL_SCANCODE_W) {
           player_move_event.direction = MoveEvent::Direction::FORWARD;
           player_move_event.cancel = false;
-          dispatcher->enqueue<MoveEvent>(player_move_event);
+          dispatcher->trigger(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_S) {
           player_move_event.direction = MoveEvent::Direction::BACKWARD;
           player_move_event.cancel = false;
-          dispatcher->enqueue<MoveEvent>(player_move_event);
+          dispatcher->trigger(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_A) {
           player_move_event.direction = MoveEvent::Direction::LEFT;
           player_move_event.cancel = false;
-          dispatcher->enqueue<MoveEvent>(player_move_event);
+          dispatcher->trigger(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_D) {
           player_move_event.direction = MoveEvent::Direction::RIGHT;
           player_move_event.cancel = false;
-          dispatcher->enqueue<MoveEvent>(player_move_event);
+          dispatcher->trigger(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_SPACE) {
           player_move_event.direction = MoveEvent::Direction::UP;
           player_move_event.cancel = false;
-          dispatcher->enqueue<MoveEvent>(player_move_event);
+          dispatcher->trigger(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_LSHIFT) {
           player_move_event.direction = MoveEvent::Direction::DOWN;
           player_move_event.cancel = false;
-          dispatcher->enqueue<MoveEvent>(player_move_event);
+          dispatcher->trigger(player_move_event);
         }
         break;
       }
@@ -52,27 +52,27 @@ void InputSystem::update(double delta_time) {
         if (event.key.scancode == SDL_SCANCODE_W) {
           player_move_event.direction = MoveEvent::Direction::FORWARD;
           player_move_event.cancel = true;
-          dispatcher->enqueue<MoveEvent>(player_move_event);
+          dispatcher->trigger(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_S) {
           player_move_event.direction = MoveEvent::Direction::BACKWARD;
           player_move_event.cancel = true;
-          dispatcher->enqueue<MoveEvent>(player_move_event);
+          dispatcher->trigger(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_A) {
           player_move_event.direction = MoveEvent::Direction::LEFT;
           player_move_event.cancel = true;
-          dispatcher->enqueue<MoveEvent>(player_move_event);
+          dispatcher->trigger(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_D) {
           player_move_event.direction = MoveEvent::Direction::RIGHT;
           player_move_event.cancel = true;
-          dispatcher->enqueue<MoveEvent>(player_move_event);
+          dispatcher->trigger(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_SPACE) {
           player_move_event.direction = MoveEvent::Direction::UP;
           player_move_event.cancel = true;
-          dispatcher->enqueue<MoveEvent>(player_move_event);
+          dispatcher->trigger(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_LSHIFT) {
           player_move_event.direction = MoveEvent::Direction::DOWN;
           player_move_event.cancel = true;
-          dispatcher->enqueue<MoveEvent>(player_move_event);
+          dispatcher->trigger(player_move_event);
         }
         break;
       }
@@ -80,7 +80,7 @@ void InputSystem::update(double delta_time) {
         EyeMoveEvent eye_move_event;
         eye_move_event.yaw = event.motion.xrel * 0.05f;
         eye_move_event.pitch = -event.motion.yrel * 0.05f;
-        dispatcher->enqueue<EyeMoveEvent>(eye_move_event);
+        dispatcher->trigger(eye_move_event);
         break;
       }
       default:

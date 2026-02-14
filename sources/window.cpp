@@ -10,13 +10,15 @@ Window::Window(int width, int height, std::string_view title) {
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_ALPHA_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_MULTISAMPLESAMPLES, 4);
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
+  
   window_ = SDL_CreateWindow(title.data(), width, height, SDL_WINDOW_OPENGL);
   context_ = SDL_GL_CreateContext(window_);
   is_running_ = true;
   SDL_GL_MakeCurrent(window_, context_);
   SDL_ShowWindow(window_);
+  SDL_GL_SetSwapInterval(1);
 
   SDL_SetWindowRelativeMouseMode(window_, true);
   SDL_SetWindowMouseGrab(window_, true);
