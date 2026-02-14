@@ -48,5 +48,4 @@ void RenderSystem::update(double delta_time) {
     glBindVertexArray(mesh.VAO);
     glDrawArrays(GL_TRIANGLES, 0, mesh.triangle_count);
   }
-  context_->getWindow()->present();
 }

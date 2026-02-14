@@ -1,15 +1,16 @@
 #include "window/window.h"
 
 Window::Window(int width, int height, std::string_view title) {
-  SDL_Init(0);
+  SDL_SetHint(SDL_HINT_VIDEO_DOUBLE_BUFFER, "1");
+  SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_CONTEXT_MAJOR_VERSION, 4);
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_CONTEXT_MINOR_VERSION, 6);
+  SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_RED_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_GREEN_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_BLUE_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_ALPHA_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_DEPTH_SIZE, 24);
-  SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_MULTISAMPLESAMPLES, 4);
   SDL_GL_SetAttribute(SDL_GLAttr::SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   
@@ -41,6 +42,7 @@ bool Window::shouldClose() {
 }
 
 void Window::present() {
+  spdlog::info("Present");
   SDL_GL_SwapWindow(window_);
 }
 

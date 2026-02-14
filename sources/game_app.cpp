@@ -29,6 +29,7 @@ void GameApp::initialize() {
 
 void GameApp::run() {
   while (is_running_) {
+    spdlog::info("update");
     update();
   }
 }
