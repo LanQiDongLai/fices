@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 
 #include <vector>
+#include <map>
 
 #include "components/chunk_block_set.h"
 #include "components/mesh.h"
@@ -29,6 +30,7 @@ class ChunkSystem {
   void onGenerateChunk(ChunkGenerateEvent event);
   Mesh generateMesh(ChunkBlockSet& block_set);
   Mesh combineToMesh(const MeshData& mesh_data);
+  void onRemoveChunk(ChunkRemoveEvent event);
 
   void addFrontFace(MeshData* mesh_data, float x, float y, float z,
                     float texture_offset_x, float texture_offset_y);
@@ -45,4 +47,5 @@ class ChunkSystem {
   std::pair<float, float> findTypeUV(Block::BlockType type);
   Context* context_;
   fices::Random* random_;
+  std::map<std::pair<int, int>, entt::entity> postion_to_chunks_cache_;
 };

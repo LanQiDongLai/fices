@@ -19,6 +19,10 @@ void ChunkSystem::initialize() {
       onGenerateChunk(event);
     }
   }
+  ChunkRemoveEvent remove_event;
+  remove_event.chunk_x = 0;
+  remove_event.chunk_z = 0;
+  onRemoveChunk(remove_event);
 }
 
 void ChunkSystem::update(double delta_time) {}
@@ -36,6 +40,8 @@ void ChunkSystem::onGenerateChunk(ChunkGenerateEvent event) {
         Block block;
         if (i < height) {
           block.block_type = Block::BlockType::STONE;
+        } else if (i < height + 2) {
+          block.block_type = Block::BlockType::DIRT;
         } else {
           block.block_type = Block::BlockType::AIR;
         }
@@ -43,24 +49,11 @@ void ChunkSystem::onGenerateChunk(ChunkGenerateEvent event) {
       }
     }
   }
-  // for (int i = 0; i < 256; i++) {
-  //   for (int j = 0; j < 16; j++) {
-  //     for (int k = 0; k < 16; k++) {
-  //       Block block;
-  //       if (i < 20)
-  //         block.block_type = Block::BlockType::STONE;
-  //       else if(i < 50)
-  //         block.block_type = Block::BlockType::DIRT;
-  //       else
-  //         block.block_type = Block::BlockType::AIR;
-  //       block_set.blocks[i][j][k] = block;
-  //     }
-  //   }
-  // }
   Mesh mesh = generateMesh(block_set);
   Transform transform{
       .x = event.chunk_x * 16.f, .y = 0, .z = event.chunk_z * 16.f};
-  Chunk(context_, block_set, transform, mesh);
+  Chunk chunk(context_, block_set, transform, mesh);
+  postion_to_chunks_cache_.insert({{event.chunk_x, event.chunk_z}, chunk.getEntityId()});
 }
 
 Mesh ChunkSystem::generateMesh(ChunkBlockSet& block_set) {
@@ -138,6 +131,7 @@ Mesh ChunkSystem::combineToMesh(const MeshData& mesh_data) {
   glEnableVertexAttribArray(2);
   Mesh mesh;
   mesh.VAO = VAO;
+  mesh.VBOs.push_back(VBO);
   mesh.triangle_count = mesh_data.points.size() / 3;
   return mesh;
 }
@@ -603,4 +597,18 @@ std::pair<float, float> ChunkSystem::findTypeUV(Block::BlockType type) {
     default:
       return {0.f, 0.f};
   }
+}
+
+void ChunkSystem::onRemoveChunk(ChunkRemoveEvent event) {
+  if(!postion_to_chunks_cache_.count({event.chunk_x, event.chunk_z})) {
+    return;
+  }
+  entt::entity chunk = postion_to_chunks_cache_[{event.chunk_x, event.chunk_z}];
+  auto *registry = context_->getRegistry();
+  auto view = registry->view<Mesh>();
+  Mesh& mesh = view.get<Mesh>(chunk);
+  glDeleteVertexArrays(1, &mesh.VAO);
+  glDeleteBuffers(mesh.VBOs.size(), mesh.VBOs.data());
+  registry->destroy(chunk);
+  postion_to_chunks_cache_.erase({event.chunk_x, event.chunk_z});
 }

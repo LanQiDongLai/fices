@@ -42,7 +42,6 @@ bool Window::shouldClose() {
 }
 
 void Window::present() {
-  spdlog::info("Present");
   SDL_GL_SwapWindow(window_);
 }
 
