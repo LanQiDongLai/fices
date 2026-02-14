@@ -22,21 +22,56 @@ void InputSystem::update(double delta_time) {
         MoveEvent player_move_event;
         if (event.key.scancode == SDL_SCANCODE_W) {
           player_move_event.direction = MoveEvent::Direction::FORWARD;
+          player_move_event.cancel = false;
           dispatcher->enqueue<MoveEvent>(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_S) {
           player_move_event.direction = MoveEvent::Direction::BACKWARD;
+          player_move_event.cancel = false;
           dispatcher->enqueue<MoveEvent>(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_A) {
           player_move_event.direction = MoveEvent::Direction::LEFT;
+          player_move_event.cancel = false;
           dispatcher->enqueue<MoveEvent>(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_D) {
           player_move_event.direction = MoveEvent::Direction::RIGHT;
+          player_move_event.cancel = false;
           dispatcher->enqueue<MoveEvent>(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_SPACE) {
           player_move_event.direction = MoveEvent::Direction::UP;
+          player_move_event.cancel = false;
           dispatcher->enqueue<MoveEvent>(player_move_event);
         } else if (event.key.scancode == SDL_SCANCODE_LSHIFT) {
           player_move_event.direction = MoveEvent::Direction::DOWN;
+          player_move_event.cancel = false;
+          dispatcher->enqueue<MoveEvent>(player_move_event);
+        }
+        break;
+      }
+      case SDL_EVENT_KEY_UP: {
+        MoveEvent player_move_event;
+        if (event.key.scancode == SDL_SCANCODE_W) {
+          player_move_event.direction = MoveEvent::Direction::FORWARD;
+          player_move_event.cancel = true;
+          dispatcher->enqueue<MoveEvent>(player_move_event);
+        } else if (event.key.scancode == SDL_SCANCODE_S) {
+          player_move_event.direction = MoveEvent::Direction::BACKWARD;
+          player_move_event.cancel = true;
+          dispatcher->enqueue<MoveEvent>(player_move_event);
+        } else if (event.key.scancode == SDL_SCANCODE_A) {
+          player_move_event.direction = MoveEvent::Direction::LEFT;
+          player_move_event.cancel = true;
+          dispatcher->enqueue<MoveEvent>(player_move_event);
+        } else if (event.key.scancode == SDL_SCANCODE_D) {
+          player_move_event.direction = MoveEvent::Direction::RIGHT;
+          player_move_event.cancel = true;
+          dispatcher->enqueue<MoveEvent>(player_move_event);
+        } else if (event.key.scancode == SDL_SCANCODE_SPACE) {
+          player_move_event.direction = MoveEvent::Direction::UP;
+          player_move_event.cancel = true;
+          dispatcher->enqueue<MoveEvent>(player_move_event);
+        } else if (event.key.scancode == SDL_SCANCODE_LSHIFT) {
+          player_move_event.direction = MoveEvent::Direction::DOWN;
+          player_move_event.cancel = true;
           dispatcher->enqueue<MoveEvent>(player_move_event);
         }
         break;

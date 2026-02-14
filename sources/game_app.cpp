@@ -49,7 +49,6 @@ void GameApp::update() {
 
   context_->getDispatcher()->update();
   context_->getWindow()->present();
-  spdlog::info("fps:{}", 1000000 / duration.count());
 }
 
 void GameApp::onCloseWindow() {

@@ -20,4 +20,11 @@ class PlayerSystem {
   void onMove(MoveEvent event);
   void onEyeMove(EyeMoveEvent event);
   Context* context_;
+  std::optional<entt::entity> player_;
+  bool is_moving_forward_;
+  bool is_moving_backward_;
+  bool is_moving_up_;
+  bool is_moving_down_;
+  bool is_moving_left_;
+  bool is_moving_right_;
 };
