@@ -12,8 +12,8 @@ void ChunkSystem::initialize() {
   ChunkGenerateEvent event;
   event.chunk_x = 0;
   event.chunk_z = 0;
-  for(int i = 0; i < 8; i++) {
-    for(int j = 0; j < 8; j++) {
+  for (int i = 0; i < 8; i++) {
+    for (int j = 0; j < 8; j++) {
       event.chunk_x = i;
       event.chunk_z = j;
       onGenerateChunk(event);
@@ -28,7 +28,10 @@ void ChunkSystem::onGenerateChunk(ChunkGenerateEvent event) {
   for (int j = 0; j < 16; j++) {
     for (int k = 0; k < 16; k++) {
       float height =
-          random_->perlinNoise((event.chunk_x * 16 + j) / 16.f / 128.f, (event.chunk_z * 16 + k) / 16.f / 128.f) * 10 + 20.5;
+          random_->fractalNoise((event.chunk_x * 16 + j) / 16.f,
+                                (event.chunk_z * 16 + k) / 16.f, 4, 0.5, 2.0) *
+              5 +
+          20.f;
       for (int i = 0; i < 256; i++) {
         Block block;
         if (i < height) {
@@ -55,7 +58,8 @@ void ChunkSystem::onGenerateChunk(ChunkGenerateEvent event) {
   //   }
   // }
   Mesh mesh = generateMesh(block_set);
-  Transform transform{.x = event.chunk_x * 16.f, .y = 0, .z = event.chunk_z * 16.f};
+  Transform transform{
+      .x = event.chunk_x * 16.f, .y = 0, .z = event.chunk_z * 16.f};
   Chunk(context_, block_set, transform, mesh);
 }
 
