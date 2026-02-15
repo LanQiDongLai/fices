@@ -32,6 +32,8 @@ class ChunkSystem {
   Mesh combineToMesh(const MeshData& mesh_data);
   void onRemoveChunk(ChunkRemoveEvent event);
 
+  void manageChunk(int player_in_chunk_x, int player_in_chunk_z, int distance = RENDER_DISTANCE);
+
   void addFrontFace(MeshData* mesh_data, float x, float y, float z,
                     float texture_offset_x, float texture_offset_y);
   void addBehindFace(MeshData* mesh_data, float x, float y, float z,
@@ -48,4 +50,6 @@ class ChunkSystem {
   Context* context_;
   fices::Random* random_;
   std::map<std::pair<int, int>, entt::entity> postion_to_chunks_cache_;
+  std::optional<entt::entity> player_;
+  const static int RENDER_DISTANCE = 16;
 };

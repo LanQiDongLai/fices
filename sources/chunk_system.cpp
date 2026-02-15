@@ -9,23 +9,33 @@ void ChunkSystem::initialize() {
   context_->getDispatcher()
       ->sink<ChunkGenerateEvent>()
       .connect<&ChunkSystem::onGenerateChunk>(this);
-  ChunkGenerateEvent event;
-  event.chunk_x = 0;
-  event.chunk_z = 0;
-  for (int i = 0; i < 8; i++) {
-    for (int j = 0; j < 8; j++) {
-      event.chunk_x = i;
-      event.chunk_z = j;
-      onGenerateChunk(event);
-    }
-  }
-  ChunkRemoveEvent remove_event;
-  remove_event.chunk_x = 0;
-  remove_event.chunk_z = 0;
-  onRemoveChunk(remove_event);
+  context_->getDispatcher()
+      ->sink<ChunkRemoveEvent>()
+      .connect<&ChunkSystem::onRemoveChunk>(this);
+  // // debug
+  // ChunkGenerateEvent event;
+  // event.chunk_x = -1;
+  // event.chunk_z = -1;
+  // onGenerateChunk(event);
 }
 
-void ChunkSystem::update(double delta_time) {}
+void ChunkSystem::update(double delta_time) {
+  using namespace entt::literals;
+  entt::registry* registry = context_->getRegistry();
+  auto view = registry->view<Tag, Transform>();
+  if (!player_.has_value()) {
+    for (auto entity : view) {
+      Tag& tag = view.get<Tag>(entity);
+      if (tag.id == "player"_hs) {
+        player_ = entity;
+      }
+    }
+  }
+  Transform& player_position = view.get<Transform>(player_.value());
+  int player_in_chunk_x = (int)std::floor(player_position.x) / 16;
+  int player_in_chunk_z = (int)std::floor(player_position.z) / 16;
+  manageChunk(player_in_chunk_x, player_in_chunk_z);
+}
 
 void ChunkSystem::onGenerateChunk(ChunkGenerateEvent event) {
   ChunkBlockSet block_set;
@@ -611,4 +621,36 @@ void ChunkSystem::onRemoveChunk(ChunkRemoveEvent event) {
   glDeleteBuffers(mesh.VBOs.size(), mesh.VBOs.data());
   registry->destroy(chunk);
   postion_to_chunks_cache_.erase({event.chunk_x, event.chunk_z});
+}
+
+void ChunkSystem::manageChunk(int player_in_chunk_x, int player_in_chunk_z, int distance) {
+  std::vector<std::pair<int, int>> remove_chunks;
+  for(auto& [position, chunk]: postion_to_chunks_cache_) {
+    int chunk_distance = 0;
+    chunk_distance += abs(position.first - player_in_chunk_x);
+    chunk_distance += abs(position.second - player_in_chunk_z);
+    if(chunk_distance > distance) {
+      remove_chunks.emplace_back(position.first, position.second);
+    }
+  }
+  for(auto& position: remove_chunks) {
+    ChunkRemoveEvent event;
+    event.chunk_x = position.first;
+    event.chunk_z = position.second;
+    onRemoveChunk(event);
+  }
+  for(int dx = -distance; dx <= distance; dx++) {
+    int max_dz = distance - abs(dx);
+    for(int dz = -max_dz; dz <= max_dz; dz++) {
+      int chunk_x = dx + player_in_chunk_x;
+      int chunk_z = dz + player_in_chunk_z;
+      if(postion_to_chunks_cache_.count({chunk_x, chunk_z})) {
+        continue;
+      }
+      ChunkGenerateEvent event;
+      event.chunk_x = chunk_x;
+      event.chunk_z = chunk_z;
+      onGenerateChunk(event);
+    }
+  }
 }

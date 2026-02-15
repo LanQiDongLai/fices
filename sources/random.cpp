@@ -22,11 +22,14 @@ float fices::Random::getFloat() {
 int fices::Random::getInt() { return distribution_(random_engine_); }
 
 double fices::Random::perlinNoise(double x, double y) {
-  int xi = (int)std::floor(x) & 255;
-  int yi = (int)std::floor(y) & 255;
+  int xi = (int)std::floor(x);
+  int yi = (int)std::floor(y);
 
   double xf = x - xi;
   double yf = y - yi;
+
+  xi = xi & 255;
+  yi = yi & 255;
 
   double u = fices::math::fade(xf);
   double v = fices::math::fade(yf);
