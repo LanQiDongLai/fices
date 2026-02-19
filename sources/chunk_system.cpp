@@ -12,6 +12,9 @@ void ChunkSystem::initialize() {
   context_->getDispatcher()
       ->sink<ChunkRemoveEvent>()
       .connect<&ChunkSystem::onRemoveChunk>(this);
+  context_->getDispatcher()
+      ->sink<PlaceBlockEvent>()
+      .connect<&ChunkSystem::onPlaceBlock>(this);
 }
 
 void ChunkSystem::update(double delta_time) {
@@ -30,6 +33,7 @@ void ChunkSystem::update(double delta_time) {
   int player_in_chunk_x = (int)std::floor(player_position.x) / 16;
   int player_in_chunk_z = (int)std::floor(player_position.z) / 16;
   manageChunk(player_in_chunk_x, player_in_chunk_z);
+  updateMesh();
 }
 
 void ChunkSystem::onGenerateChunk(ChunkGenerateEvent event) {
@@ -58,7 +62,7 @@ void ChunkSystem::onGenerateChunk(ChunkGenerateEvent event) {
   Transform transform{
       .x = event.chunk_x * 16.f, .y = 0, .z = event.chunk_z * 16.f};
   Chunk chunk(context_, block_set, transform, mesh);
-  postion_to_chunks_cache_.insert({{event.chunk_x, event.chunk_z}, chunk.getEntityId()});
+  position_to_chunks_cache_.insert({{event.chunk_x, event.chunk_z}, chunk.getEntityId()});
 }
 
 Mesh ChunkSystem::generateMesh(ChunkBlockSet& block_set) {
@@ -605,22 +609,22 @@ std::pair<float, float> ChunkSystem::findTypeUV(Block::BlockType type) {
 }
 
 void ChunkSystem::onRemoveChunk(ChunkRemoveEvent event) {
-  if(!postion_to_chunks_cache_.count({event.chunk_x, event.chunk_z})) {
+  if(!position_to_chunks_cache_.count({event.chunk_x, event.chunk_z})) {
     return;
   }
-  entt::entity chunk = postion_to_chunks_cache_[{event.chunk_x, event.chunk_z}];
+  entt::entity chunk = position_to_chunks_cache_[{event.chunk_x, event.chunk_z}];
   auto *registry = context_->getRegistry();
   auto view = registry->view<Mesh>();
   Mesh& mesh = view.get<Mesh>(chunk);
   glDeleteVertexArrays(1, &mesh.VAO);
   glDeleteBuffers(mesh.VBOs.size(), mesh.VBOs.data());
   registry->destroy(chunk);
-  postion_to_chunks_cache_.erase({event.chunk_x, event.chunk_z});
+  position_to_chunks_cache_.erase({event.chunk_x, event.chunk_z});
 }
 
 void ChunkSystem::manageChunk(int player_in_chunk_x, int player_in_chunk_z, int distance) {
   std::vector<std::pair<int, int>> remove_chunks;
-  for(auto& [position, chunk]: postion_to_chunks_cache_) {
+  for(auto& [position, chunk]: position_to_chunks_cache_) {
     int chunk_distance = 0;
     chunk_distance += abs(position.first - player_in_chunk_x);
     chunk_distance += abs(position.second - player_in_chunk_z);
@@ -639,7 +643,7 @@ void ChunkSystem::manageChunk(int player_in_chunk_x, int player_in_chunk_z, int 
     for(int dz = -max_dz; dz <= max_dz; dz++) {
       int chunk_x = dx + player_in_chunk_x;
       int chunk_z = dz + player_in_chunk_z;
-      if(postion_to_chunks_cache_.count({chunk_x, chunk_z})) {
+      if(position_to_chunks_cache_.count({chunk_x, chunk_z})) {
         continue;
       }
       ChunkGenerateEvent event;
@@ -648,4 +652,67 @@ void ChunkSystem::manageChunk(int player_in_chunk_x, int player_in_chunk_z, int 
       onGenerateChunk(event);
     }
   }
+}
+
+void ChunkSystem::setBlock(int x, int y, int z, Block block) {
+  auto* registry = context_->getRegistry();
+  int chunk_x = x / 16;
+  int chunk_z = z / 16;
+  if(!position_to_chunks_cache_.count({chunk_x, chunk_z})) {
+    // TODO: write into file
+    return;
+  }
+  entt::entity chunk = position_to_chunks_cache_[{chunk_x, chunk_z}];
+  auto view = registry->view<ChunkBlockSet, Mesh, ChunkMeshState>();
+  auto& block_set = view.get<ChunkBlockSet>(chunk);
+  auto& mesh = view.get<Mesh>(chunk);
+  auto& mesh_state = view.get<ChunkMeshState>(chunk);
+  mesh_state.state = ChunkMeshState::STATE::DIRT;
+  block_set.blocks[y][x % 16][z % 16] = block;
+}
+
+Block ChunkSystem::getBlock(int x, int y, int z) {
+  auto* registry = context_->getRegistry();
+  int chunk_x = x / 16;
+  int chunk_z = z / 16;
+  if(!position_to_chunks_cache_.count({chunk_x, chunk_z})) {
+    // TODO: read from file
+    return Block{Block::BlockType::AIR};
+  }
+  entt::entity chunk = position_to_chunks_cache_[{chunk_x, chunk_z}];
+  auto view = registry->view<ChunkBlockSet>();
+  auto& block_set = view.get<ChunkBlockSet>(chunk);
+  return block_set.blocks[y][x % 16][z % 16];
+}
+
+void ChunkSystem::updateMesh() {
+  auto* registry = context_->getRegistry();
+  for(auto& [position, chunk]: position_to_chunks_cache_) {
+    auto view = registry->view<ChunkMeshState, ChunkBlockSet>();
+    auto& chunk_mesh_state = view.get<ChunkMeshState>(chunk);
+    if(chunk_mesh_state.state == ChunkMeshState::STATE::AVALIBLE) {
+      continue;
+    }
+    if(chunk_mesh_state.state == ChunkMeshState::STATE::DIRT) {
+      Mesh new_mesh = generateMesh(view.get<ChunkBlockSet>(chunk));
+      auto mesh_view = registry->view<Mesh>();
+      Mesh& mesh = mesh_view.get<Mesh>(chunk);
+      glDeleteBuffers(mesh.VBOs.size(), mesh.VBOs.data());
+      glDeleteVertexArrays(1, &mesh.VAO);
+      mesh = new_mesh;
+      chunk_mesh_state.state = ChunkMeshState::STATE::AVALIBLE;
+    }
+    if(chunk_mesh_state.state == ChunkMeshState::STATE::UNGENERATED) {
+      Mesh mesh = generateMesh(view.get<ChunkBlockSet>(chunk));
+      registry->emplace<Mesh>(chunk, mesh);
+      chunk_mesh_state.state = ChunkMeshState::STATE::AVALIBLE;
+    }
+  }
+}
+
+void ChunkSystem::onPlaceBlock(PlaceBlockEvent event) {
+  spdlog::info("place");
+  Block block;
+  block.block_type = Block::BlockType::STONE;
+  setBlock(0, 40, 0, block);
 }

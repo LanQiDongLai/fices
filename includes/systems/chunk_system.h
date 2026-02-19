@@ -11,6 +11,7 @@
 #include "entities/chunk.h"
 #include "events/chunk_generate_event.h"
 #include "events/chunk_remove_event.h"
+#include "events/place_block_event.h"
 
 #include "utils/random.h"
 
@@ -25,12 +26,16 @@ class ChunkSystem {
   ChunkSystem(Context* context);
   void initialize();
   void update(double delta_time);
+  void setBlock(int x, int y, int z, Block block);
+  Block getBlock(int x, int y, int z);
 
  private:
   void onGenerateChunk(ChunkGenerateEvent event);
   Mesh generateMesh(ChunkBlockSet& block_set);
   Mesh combineToMesh(const MeshData& mesh_data);
   void onRemoveChunk(ChunkRemoveEvent event);
+  void updateMesh();
+  void onPlaceBlock(PlaceBlockEvent event);
 
   void manageChunk(int player_in_chunk_x, int player_in_chunk_z, int distance = RENDER_DISTANCE);
 
@@ -49,7 +54,7 @@ class ChunkSystem {
   std::pair<float, float> findTypeUV(Block::BlockType type);
   Context* context_;
   fices::Random* random_;
-  std::map<std::pair<int, int>, entt::entity> postion_to_chunks_cache_;
+  std::map<std::pair<int, int>, entt::entity> position_to_chunks_cache_;
   std::optional<entt::entity> player_;
   const static int RENDER_DISTANCE = 16;
 };

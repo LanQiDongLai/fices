@@ -3,6 +3,7 @@
 #include "events/game_quit_event.h"
 #include "events/move_event.h"
 #include "events/eye_move_event.h"
+#include "events/place_block_event.h"
 
 InputSystem::InputSystem(Context* context) {
   context_ = context;
@@ -81,6 +82,11 @@ void InputSystem::update(double delta_time) {
         eye_move_event.yaw = event.motion.xrel * 0.05f;
         eye_move_event.pitch = -event.motion.yrel * 0.05f;
         dispatcher->trigger(eye_move_event);
+        break;
+      }
+      case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+        PlaceBlockEvent event;
+        dispatcher->trigger(event);
         break;
       }
       default:
