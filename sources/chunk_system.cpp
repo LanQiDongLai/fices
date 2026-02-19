@@ -658,6 +658,9 @@ void ChunkSystem::setBlock(int x, int y, int z, Block block) {
   auto* registry = context_->getRegistry();
   int chunk_x = x / 16;
   int chunk_z = z / 16;
+  if(y < 0 || y > 255) {
+    return;
+  }
   if(!position_to_chunks_cache_.count({chunk_x, chunk_z})) {
     // TODO: write into file
     return;
@@ -668,13 +671,16 @@ void ChunkSystem::setBlock(int x, int y, int z, Block block) {
   auto& mesh = view.get<Mesh>(chunk);
   auto& mesh_state = view.get<ChunkMeshState>(chunk);
   mesh_state.state = ChunkMeshState::STATE::DIRT;
-  block_set.blocks[y][x % 16][z % 16] = block;
+  block_set.blocks[y][(z % 16 + 16) % 16][(x % 16 + 16) % 16] = block;
 }
 
 Block ChunkSystem::getBlock(int x, int y, int z) {
   auto* registry = context_->getRegistry();
   int chunk_x = x / 16;
   int chunk_z = z / 16;
+  if(y < 0 || y > 255) {
+    return Block{.block_type = Block::BlockType::AIR};
+  }
   if(!position_to_chunks_cache_.count({chunk_x, chunk_z})) {
     // TODO: read from file
     return Block{Block::BlockType::AIR};
@@ -682,7 +688,7 @@ Block ChunkSystem::getBlock(int x, int y, int z) {
   entt::entity chunk = position_to_chunks_cache_[{chunk_x, chunk_z}];
   auto view = registry->view<ChunkBlockSet>();
   auto& block_set = view.get<ChunkBlockSet>(chunk);
-  return block_set.blocks[y][x % 16][z % 16];
+  return block_set.blocks[y][(z % 16 + 16) % 16][(x % 16 + 16) % 16];
 }
 
 void ChunkSystem::updateMesh() {
@@ -714,5 +720,21 @@ void ChunkSystem::onPlaceBlock(PlaceBlockEvent event) {
   spdlog::info("place");
   Block block;
   block.block_type = Block::BlockType::STONE;
-  setBlock(0, 40, 0, block);
+  for(int i = 0; i < 20; i++) {
+    for(int j = 0; j < 20; j++) {
+      for(int k = 0; k < 20; k++) {
+        setBlock(i, k + 20, j, block);
+      }
+    }
+  }
+  block.block_type = Block::BlockType::AIR;
+  for(int i = 1; i < 19; i++) {
+    for(int j = 1; j < 19; j++) {
+      for(int k = 1; k < 19; k++) {
+        setBlock(i, k + 20, j, block);
+      }
+    }
+  }
+  setBlock(0, 30, 10, block);
+  setBlock(0, 29, 10, block);
 }
