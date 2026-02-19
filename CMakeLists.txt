@@ -11,6 +11,7 @@ find_package(EnTT REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(glm REQUIRED)
+find_package(SQLiteCpp REQUIRED)
 
 # target link libraries
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/includes)
@@ -22,5 +23,5 @@ target_link_libraries(${PROJECT_NAME}
         spdlog::spdlog
         SDL3::SDL3
         glm::glm
-        glfw
+        SQLiteCpp   
 )
