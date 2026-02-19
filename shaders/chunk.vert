@@ -9,10 +9,12 @@ uniform mat4 model;
 
 out vec2 uv;
 out vec3 fragement_position;
+out vec3 normal;
 
 void main() {
   vec4 position = vec4(in_postion.xyz, 1);
   fragement_position = vec3(model * position);
   gl_Position = projection * view * model * position;
   uv = in_uv;
+  normal = in_normal;
 }

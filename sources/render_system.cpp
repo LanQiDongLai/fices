@@ -34,9 +34,12 @@ void RenderSystem::update(double delta_time) {
     glm::mat4 view =
         glm::lookAt(glm::vec3(transform.x, transform.y, transform.z),
                     glm::vec3(transform.x, transform.y, transform.z) + front, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::vec3 light_direction = glm::vec3(1.f);
+    light_direction = glm::normalize(light_direction);
     shader_->setUniformMatrix4f("projection", projection);
     shader_->setUniformMatrix4f("view", view);
     shader_->setUniformVector3f("view_position", transform.x, transform.y, transform.z);
+    shader_->setUniformVector3f("light_direction", light_direction);
   }
   for (auto entity : mesh_view) {
     Mesh& mesh = mesh_view.get<Mesh>(entity);

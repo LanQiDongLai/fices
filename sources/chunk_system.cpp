@@ -12,11 +12,6 @@ void ChunkSystem::initialize() {
   context_->getDispatcher()
       ->sink<ChunkRemoveEvent>()
       .connect<&ChunkSystem::onRemoveChunk>(this);
-  // // debug
-  // ChunkGenerateEvent event;
-  // event.chunk_x = -1;
-  // event.chunk_z = -1;
-  // onGenerateChunk(event);
 }
 
 void ChunkSystem::update(double delta_time) {
@@ -43,8 +38,8 @@ void ChunkSystem::onGenerateChunk(ChunkGenerateEvent event) {
     for (int k = 0; k < 16; k++) {
       float height =
           random_->fractalNoise((event.chunk_x * 16 + j) / 16.f,
-                                (event.chunk_z * 16 + k) / 16.f, 4, 0.5, 2.0) *
-              5 +
+                                (event.chunk_z * 16 + k) / 16.f, 6, 0.3, 3.0) *
+              10 +
           20.f;
       for (int i = 0; i < 256; i++) {
         Block block;
