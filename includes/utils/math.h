@@ -2,18 +2,18 @@ namespace fices {
 
 namespace math {
 
-float lerp(float t, float a, float b) { return a + t * (b - a); }
+double lerp(double t, double a, double b) { return a + t * (b - a); }
 
-float grad(int hash, float x, float y) {
+double grad(int hash, double x, double y) {
   int h = hash & 7;
 
-  float u = (h < 4) ? x : y;
-  float v = (h < 4) ? y : x;
+  double u = (h < 4) ? x : y;
+  double v = (h < 4) ? y : x;
 
   return ((h & 1) ? -u : u) + ((h & 2) ? -2.0f * v : 2.0f * v);
 }
 
-float fade(float t) {
+double fade(double t) {
     return t * t * t * (t * (t * 6 - 15) + 10);
 }
 

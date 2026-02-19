@@ -1,4 +1,5 @@
 #pragma once
+#include <glm/glm.hpp>
 
 enum class CameraType {
   PERSPECTIVE,
@@ -6,7 +7,9 @@ enum class CameraType {
 };
 
 struct Camera {
-  double fov;
-  double near;
-  double far;
+  float fov;
+  float near;
+  float far;
+  float yaw;
+  float pitch;
 };
