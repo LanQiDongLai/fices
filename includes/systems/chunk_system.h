@@ -1,60 +1,48 @@
 #pragma once
-#include <glad/glad.h>
-#include <spdlog/spdlog.h>
 
-#include <vector>
+#include <entt/entt.hpp>
+
 #include <map>
+#include <optional>
+#include <utility>
+#include <vector>
 
-#include "components/chunk_block_set.h"
-#include "components/mesh.h"
+#include "components/block.h"
 #include "context.h"
-#include "entities/chunk.h"
-#include "events/chunk_generate_event.h"
-#include "events/chunk_remove_event.h"
 #include "events/place_block_event.h"
-
-#include "utils/random.h"
-
-struct MeshData {
-  std::vector<float> points;
-  std::vector<float> uv;
-  std::vector<float> normal;
-};
+#include "rendering/mesh_manager.h"
+#include "world/chunk_mesher.h"
+#include "world/terrain_generator.h"
 
 class ChunkSystem {
  public:
-  ChunkSystem(Context* context);
+  ChunkSystem(Context& context, TerrainGenerator& terrain_generator,
+              ChunkMesher& chunk_mesher, MeshManager& mesh_manager);
+  ~ChunkSystem();
+
+  ChunkSystem(const ChunkSystem&) = delete;
+  ChunkSystem& operator=(const ChunkSystem&) = delete;
+
   void initialize();
   void update(double delta_time);
   void setBlock(int x, int y, int z, Block block);
-  Block getBlock(int x, int y, int z);
+  [[nodiscard]] Block getBlock(int x, int y, int z) const;
 
  private:
-  void onGenerateChunk(ChunkGenerateEvent event);
-  Mesh generateMesh(ChunkBlockSet& block_set);
-  Mesh combineToMesh(const MeshData& mesh_data);
-  void onRemoveChunk(ChunkRemoveEvent event);
-  void updateMesh();
+  void generateChunk(int chunk_x, int chunk_z);
+  void removeChunk(int chunk_x, int chunk_z);
+  void manageChunks(int player_chunk_x, int player_chunk_z,
+                    int distance = kRenderDistance);
+  void updateMeshes();
   void onPlaceBlock(PlaceBlockEvent event);
+  [[nodiscard]] std::optional<entt::entity> findPlayer() const;
 
-  void manageChunk(int player_in_chunk_x, int player_in_chunk_z, int distance = RENDER_DISTANCE);
+  static constexpr int kRenderDistance = 16;
 
-  void addFrontFace(MeshData* mesh_data, float x, float y, float z,
-                    float texture_offset_x, float texture_offset_y);
-  void addBehindFace(MeshData* mesh_data, float x, float y, float z,
-                     float texture_offset_x, float texture_offset_y);
-  void addLeftFace(MeshData* mesh_data, float x, float y, float z,
-                   float texture_offset_x, float texture_offset_y);
-  void addRightFace(MeshData* mesh_data, float x, float y, float z,
-                    float texture_offset_x, float texture_offset_y);
-  void addTopFace(MeshData* mesh_data, float x, float y, float z,
-                  float texture_offset_x, float texture_offset_y);
-  void addBottomFace(MeshData* mesh_data, float x, float y, float z,
-                     float texture_offset_x, float texture_offset_y);
-  std::pair<float, float> findTypeUV(Block::BlockType type);
-  Context* context_;
-  fices::Random* random_;
-  std::map<std::pair<int, int>, entt::entity> position_to_chunks_cache_;
+  Context& context_;
+  TerrainGenerator& terrain_generator_;
+  ChunkMesher& chunk_mesher_;
+  MeshManager& mesh_manager_;
+  std::map<std::pair<int, int>, entt::entity> chunks_;
   std::optional<entt::entity> player_;
-  const static int RENDER_DISTANCE = 16;
 };

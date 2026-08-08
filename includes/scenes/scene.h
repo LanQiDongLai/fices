@@ -1,6 +1,7 @@
 #pragma once
 
 class Scene {
-public:
+ public:
+  virtual ~Scene() = default;
   virtual void update(double delta) = 0;
 };

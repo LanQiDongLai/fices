@@ -1,737 +1,221 @@
 #include "systems/chunk_system.h"
 
-ChunkSystem::ChunkSystem(Context* context) {
-  random_ = new fices::Random(123);
-  context_ = context;
+#include <cmath>
+
+#include <spdlog/spdlog.h>
+
+#include "components/chunk_block_set.h"
+#include "components/chunk_mesh_state.h"
+#include "components/mesh.h"
+#include "components/tag.h"
+#include "components/transform.h"
+#include "entities/chunk.h"
+
+namespace {
+
+int chunkCoordinate(int world_coordinate) {
+  return static_cast<int>(
+      std::floor(static_cast<double>(world_coordinate) / CHUNK_SIZE_X));
+}
+
+int localCoordinate(int world_coordinate, int chunk_coordinate) {
+  return world_coordinate - chunk_coordinate * CHUNK_SIZE_X;
+}
+
+}  // namespace
+
+ChunkSystem::ChunkSystem(Context& context,
+                         TerrainGenerator& terrain_generator,
+                         ChunkMesher& chunk_mesher, MeshManager& mesh_manager)
+    : context_(context),
+      terrain_generator_(terrain_generator),
+      chunk_mesher_(chunk_mesher),
+      mesh_manager_(mesh_manager) {}
+
+ChunkSystem::~ChunkSystem() {
+  context_.getDispatcher()->sink<PlaceBlockEvent>().disconnect(this);
+  while (!chunks_.empty()) {
+    const auto position = chunks_.begin()->first;
+    removeChunk(position.first, position.second);
+  }
 }
 
 void ChunkSystem::initialize() {
-  context_->getDispatcher()
-      ->sink<ChunkGenerateEvent>()
-      .connect<&ChunkSystem::onGenerateChunk>(this);
-  context_->getDispatcher()
-      ->sink<ChunkRemoveEvent>()
-      .connect<&ChunkSystem::onRemoveChunk>(this);
-  context_->getDispatcher()
+  context_.getDispatcher()
       ->sink<PlaceBlockEvent>()
       .connect<&ChunkSystem::onPlaceBlock>(this);
 }
 
 void ChunkSystem::update(double delta_time) {
-  using namespace entt::literals;
-  entt::registry* registry = context_->getRegistry();
-  auto view = registry->view<Tag, Transform>();
+  (void)delta_time;
+
+  entt::registry& registry = *context_.getRegistry();
+  if (!player_.has_value() || !registry.valid(*player_) ||
+      !registry.all_of<Transform>(*player_)) {
+    player_ = findPlayer();
+  }
   if (!player_.has_value()) {
-    for (auto entity : view) {
-      Tag& tag = view.get<Tag>(entity);
-      if (tag.id == "player"_hs) {
-        player_ = entity;
-      }
-    }
-  }
-  Transform& player_position = view.get<Transform>(player_.value());
-  int player_in_chunk_x = (int)std::floor(player_position.x) / 16;
-  int player_in_chunk_z = (int)std::floor(player_position.z) / 16;
-  manageChunk(player_in_chunk_x, player_in_chunk_z);
-  updateMesh();
-}
-
-void ChunkSystem::onGenerateChunk(ChunkGenerateEvent event) {
-  ChunkBlockSet block_set;
-  for (int j = 0; j < 16; j++) {
-    for (int k = 0; k < 16; k++) {
-      float height =
-          random_->fractalNoise((event.chunk_x * 16 + j) / 16.f,
-                                (event.chunk_z * 16 + k) / 16.f, 6, 0.3, 3.0) *
-              10 +
-          20.f;
-      for (int i = 0; i < 256; i++) {
-        Block block;
-        if (i < height) {
-          block.block_type = Block::BlockType::STONE;
-        } else if (i < height + 2) {
-          block.block_type = Block::BlockType::DIRT;
-        } else {
-          block.block_type = Block::BlockType::AIR;
-        }
-        block_set.blocks[i][j][k] = block;
-      }
-    }
-  }
-  Mesh mesh = generateMesh(block_set);
-  Transform transform{
-      .x = event.chunk_x * 16.f, .y = 0, .z = event.chunk_z * 16.f};
-  Chunk chunk(context_, block_set, transform, mesh);
-  position_to_chunks_cache_.insert({{event.chunk_x, event.chunk_z}, chunk.getEntityId()});
-}
-
-Mesh ChunkSystem::generateMesh(ChunkBlockSet& block_set) {
-  MeshData mesh_data;
-  for (int i = 0; i < 256; i++) {     // y
-    for (int j = 0; j < 16; j++) {    // z
-      for (int k = 0; k < 16; k++) {  // x
-        Block::BlockType type = block_set.blocks[i][j][k].block_type;
-        if (type == Block::BlockType::AIR) {
-          continue;
-        }
-        auto offset = findTypeUV(type);
-        if (k == 0 ||
-            block_set.blocks[i][j][k - 1].block_type == Block::BlockType::AIR) {
-          addLeftFace(&mesh_data, k, i, j, offset.first, offset.second);
-        }
-        if (j == 0 ||
-            block_set.blocks[i][j - 1][k].block_type == Block::BlockType::AIR) {
-          addFrontFace(&mesh_data, k, i, j, offset.first, offset.second);
-        }
-        if (i == 0 ||
-            block_set.blocks[i - 1][j][k].block_type == Block::BlockType::AIR) {
-          addBottomFace(&mesh_data, k, i, j, offset.first, offset.second);
-        }
-        if (k == 15 ||
-            block_set.blocks[i][j][k + 1].block_type == Block::BlockType::AIR) {
-          addRightFace(&mesh_data, k, i, j, offset.first, offset.second);
-        }
-        if (j == 15 ||
-            block_set.blocks[i][j + 1][k].block_type == Block::BlockType::AIR) {
-          addBehindFace(&mesh_data, k, i, j, offset.first, offset.second);
-        }
-        if (i == 255 ||
-            block_set.blocks[i + 1][j][k].block_type == Block::BlockType::AIR) {
-          addTopFace(&mesh_data, k, i, j, offset.first, offset.second);
-        }
-      }
-    }
-  }
-
-  return combineToMesh(mesh_data);
-}
-
-Mesh ChunkSystem::combineToMesh(const MeshData& mesh_data) {
-  GLuint VBO;
-  GLuint VAO;
-  glGenVertexArrays(1, &VAO);
-  glGenBuffers(1, &VBO);
-  glBindVertexArray(VAO);
-
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER,
-               mesh_data.points.size() * sizeof(float) +
-                   mesh_data.uv.size() * sizeof(float) +
-                   mesh_data.normal.size() * sizeof(float),
-               nullptr, GL_STATIC_DRAW);
-  glBufferSubData(GL_ARRAY_BUFFER, 0, mesh_data.points.size() * sizeof(float),
-                  mesh_data.points.data());
-  glBufferSubData(GL_ARRAY_BUFFER, mesh_data.points.size() * sizeof(float),
-                  mesh_data.uv.size() * sizeof(float), mesh_data.uv.data());
-  glBufferSubData(GL_ARRAY_BUFFER,
-                  mesh_data.points.size() * sizeof(float) +
-                      mesh_data.uv.size() * sizeof(float),
-                  mesh_data.normal.size() * sizeof(float),
-                  mesh_data.normal.data());
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float),
-                        (void*)(mesh_data.points.size() * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
-                        (void*)(mesh_data.points.size() * sizeof(float) +
-                                mesh_data.uv.size() * sizeof(float)));
-  glEnableVertexAttribArray(2);
-  Mesh mesh;
-  mesh.VAO = VAO;
-  mesh.VBOs.push_back(VBO);
-  mesh.triangle_count = mesh_data.points.size() / 3;
-  return mesh;
-}
-
-void ChunkSystem::addFrontFace(MeshData* mesh_data, float x, float y, float z,
-                               float texture_offset_x, float texture_offset_y) {
-  // right-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // left-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // right-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // left-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // left-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-}
-
-void ChunkSystem::addBehindFace(MeshData* mesh_data, float x, float y, float z,
-                                float texture_offset_x,
-                                float texture_offset_y) {
-  // left-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // left-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // left-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-}
-
-void ChunkSystem::addLeftFace(MeshData* mesh_data, float x, float y, float z,
-                              float texture_offset_x, float texture_offset_y) {
-  // left-top
-  mesh_data->normal.push_back(-1.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // left-bottom
-  mesh_data->normal.push_back(-1.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-top
-  mesh_data->normal.push_back(-1.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // left-bottom
-  mesh_data->normal.push_back(-1.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-bottom
-  mesh_data->normal.push_back(-1.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-top
-  mesh_data->normal.push_back(-1.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-}
-
-void ChunkSystem::addRightFace(MeshData* mesh_data, float x, float y, float z,
-                               float texture_offset_x, float texture_offset_y) {
-  // left-top
-  mesh_data->normal.push_back(1.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // left-bottom
-  mesh_data->normal.push_back(1.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-top
-  mesh_data->normal.push_back(1.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // left-bottom
-  mesh_data->normal.push_back(1.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-bottom
-  mesh_data->normal.push_back(1.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-top
-  mesh_data->normal.push_back(1.f);
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-}
-
-void ChunkSystem::addTopFace(MeshData* mesh_data, float x, float y, float z,
-                             float texture_offset_x, float texture_offset_y) {
-  // left-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // left-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // left-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(1.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y + 1.f);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-}
-
-void ChunkSystem::addBottomFace(MeshData* mesh_data, float x, float y, float z,
-                                float texture_offset_x,
-                                float texture_offset_y) {
-  // left-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // left-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-
-  // left-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 0.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-bottom
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 0.f);
-
-  // right-top
-  mesh_data->normal.push_back(0.f);
-  mesh_data->normal.push_back(-1.f);
-  mesh_data->normal.push_back(0.f);
-
-  mesh_data->points.push_back(x + 1.f);
-  mesh_data->points.push_back(y);
-  mesh_data->points.push_back(z + 1.f);
-
-  mesh_data->uv.push_back(texture_offset_x + 1.f);
-  mesh_data->uv.push_back(texture_offset_y + 1.f);
-}
-
-std::pair<float, float> ChunkSystem::findTypeUV(Block::BlockType type) {
-  switch (type) {
-    case Block::BlockType::DIRT:
-      return {1.f, 3.f};
-    case Block::BlockType::STONE:
-      return {0.f, 3.f};
-    default:
-      return {0.f, 0.f};
-  }
-}
-
-void ChunkSystem::onRemoveChunk(ChunkRemoveEvent event) {
-  if(!position_to_chunks_cache_.count({event.chunk_x, event.chunk_z})) {
     return;
   }
-  entt::entity chunk = position_to_chunks_cache_[{event.chunk_x, event.chunk_z}];
-  auto *registry = context_->getRegistry();
-  auto view = registry->view<Mesh>();
-  Mesh& mesh = view.get<Mesh>(chunk);
-  glDeleteVertexArrays(1, &mesh.VAO);
-  glDeleteBuffers(mesh.VBOs.size(), mesh.VBOs.data());
-  registry->destroy(chunk);
-  position_to_chunks_cache_.erase({event.chunk_x, event.chunk_z});
+
+  const Transform& player_position = registry.get<Transform>(*player_);
+  const int player_chunk_x = static_cast<int>(
+      std::floor(player_position.x / static_cast<float>(CHUNK_SIZE_X)));
+  const int player_chunk_z = static_cast<int>(
+      std::floor(player_position.z / static_cast<float>(CHUNK_SIZE_Z)));
+  manageChunks(player_chunk_x, player_chunk_z);
+  updateMeshes();
 }
 
-void ChunkSystem::manageChunk(int player_in_chunk_x, int player_in_chunk_z, int distance) {
-  std::vector<std::pair<int, int>> remove_chunks;
-  for(auto& [position, chunk]: position_to_chunks_cache_) {
-    int chunk_distance = 0;
-    chunk_distance += abs(position.first - player_in_chunk_x);
-    chunk_distance += abs(position.second - player_in_chunk_z);
-    if(chunk_distance > distance) {
-      remove_chunks.emplace_back(position.first, position.second);
+void ChunkSystem::generateChunk(int chunk_x, int chunk_z) {
+  if (chunks_.contains({chunk_x, chunk_z})) {
+    return;
+  }
+
+  ChunkBlockSet block_set = terrain_generator_.generate(chunk_x, chunk_z);
+  const MeshData mesh_data = chunk_mesher_.build(block_set);
+  const Mesh mesh = mesh_manager_.upload(mesh_data);
+  const Transform transform{.x = chunk_x * static_cast<float>(CHUNK_SIZE_X),
+                            .y = 0.0f,
+                            .z = chunk_z * static_cast<float>(CHUNK_SIZE_Z)};
+  const entt::entity entity = createChunkEntity(
+      *context_.getRegistry(), std::move(block_set), transform, mesh);
+  chunks_.emplace(std::pair{chunk_x, chunk_z}, entity);
+}
+
+void ChunkSystem::removeChunk(int chunk_x, int chunk_z) {
+  const auto iterator = chunks_.find({chunk_x, chunk_z});
+  if (iterator == chunks_.end()) {
+    return;
+  }
+
+  entt::registry& registry = *context_.getRegistry();
+  const entt::entity entity = iterator->second;
+  if (registry.valid(entity)) {
+    if (registry.all_of<Mesh>(entity)) {
+      mesh_manager_.release(registry.get<Mesh>(entity));
+    }
+    registry.destroy(entity);
+  }
+  chunks_.erase(iterator);
+}
+
+void ChunkSystem::manageChunks(int player_chunk_x, int player_chunk_z,
+                               int distance) {
+  std::vector<std::pair<int, int>> chunks_to_remove;
+  for (const auto& [position, entity] : chunks_) {
+    (void)entity;
+    const int chunk_distance = std::abs(position.first - player_chunk_x) +
+                               std::abs(position.second - player_chunk_z);
+    if (chunk_distance > distance) {
+      chunks_to_remove.push_back(position);
     }
   }
-  for(auto& position: remove_chunks) {
-    ChunkRemoveEvent event;
-    event.chunk_x = position.first;
-    event.chunk_z = position.second;
-    onRemoveChunk(event);
+
+  for (const auto& position : chunks_to_remove) {
+    removeChunk(position.first, position.second);
   }
-  for(int dx = -distance; dx <= distance; dx++) {
-    int max_dz = distance - abs(dx);
-    for(int dz = -max_dz; dz <= max_dz; dz++) {
-      int chunk_x = dx + player_in_chunk_x;
-      int chunk_z = dz + player_in_chunk_z;
-      if(position_to_chunks_cache_.count({chunk_x, chunk_z})) {
-        continue;
-      }
-      ChunkGenerateEvent event;
-      event.chunk_x = chunk_x;
-      event.chunk_z = chunk_z;
-      onGenerateChunk(event);
+
+  for (int dx = -distance; dx <= distance; ++dx) {
+    const int max_dz = distance - std::abs(dx);
+    for (int dz = -max_dz; dz <= max_dz; ++dz) {
+      generateChunk(player_chunk_x + dx, player_chunk_z + dz);
     }
   }
 }
 
 void ChunkSystem::setBlock(int x, int y, int z, Block block) {
-  auto* registry = context_->getRegistry();
-  int chunk_x = x / 16;
-  int chunk_z = z / 16;
-  if(y < 0 || y > 255) {
+  if (y < 0 || y >= CHUNK_SIZE_Y) {
     return;
   }
-  if(!position_to_chunks_cache_.count({chunk_x, chunk_z})) {
-    // TODO: write into file
+
+  const int chunk_x = chunkCoordinate(x);
+  const int chunk_z = chunkCoordinate(z);
+  const auto iterator = chunks_.find({chunk_x, chunk_z});
+  if (iterator == chunks_.end()) {
     return;
   }
-  entt::entity chunk = position_to_chunks_cache_[{chunk_x, chunk_z}];
-  auto view = registry->view<ChunkBlockSet, Mesh, ChunkMeshState>();
-  auto& block_set = view.get<ChunkBlockSet>(chunk);
-  auto& mesh = view.get<Mesh>(chunk);
-  auto& mesh_state = view.get<ChunkMeshState>(chunk);
-  mesh_state.state = ChunkMeshState::STATE::DIRT;
-  block_set.blocks[y][(z % 16 + 16) % 16][(x % 16 + 16) % 16] = block;
+
+  entt::registry& registry = *context_.getRegistry();
+  const entt::entity entity = iterator->second;
+  ChunkBlockSet& block_set = registry.get<ChunkBlockSet>(entity);
+  ChunkMeshState& mesh_state = registry.get<ChunkMeshState>(entity);
+  block_set.blocks[y][localCoordinate(z, chunk_z)][localCoordinate(x, chunk_x)] =
+      block;
+  mesh_state.state = ChunkMeshState::State::Dirty;
 }
 
-Block ChunkSystem::getBlock(int x, int y, int z) {
-  auto* registry = context_->getRegistry();
-  int chunk_x = x / 16;
-  int chunk_z = z / 16;
-  if(y < 0 || y > 255) {
+Block ChunkSystem::getBlock(int x, int y, int z) const {
+  if (y < 0 || y >= CHUNK_SIZE_Y) {
     return Block{.block_type = Block::BlockType::AIR};
   }
-  if(!position_to_chunks_cache_.count({chunk_x, chunk_z})) {
-    // TODO: read from file
-    return Block{Block::BlockType::AIR};
+
+  const int chunk_x = chunkCoordinate(x);
+  const int chunk_z = chunkCoordinate(z);
+  const auto iterator = chunks_.find({chunk_x, chunk_z});
+  if (iterator == chunks_.end()) {
+    return Block{.block_type = Block::BlockType::AIR};
   }
-  entt::entity chunk = position_to_chunks_cache_[{chunk_x, chunk_z}];
-  auto view = registry->view<ChunkBlockSet>();
-  auto& block_set = view.get<ChunkBlockSet>(chunk);
-  return block_set.blocks[y][(z % 16 + 16) % 16][(x % 16 + 16) % 16];
+
+  const ChunkBlockSet& block_set =
+      context_.getRegistry()->get<ChunkBlockSet>(iterator->second);
+  return block_set
+      .blocks[y][localCoordinate(z, chunk_z)][localCoordinate(x, chunk_x)];
 }
 
-void ChunkSystem::updateMesh() {
-  auto* registry = context_->getRegistry();
-  for(auto& [position, chunk]: position_to_chunks_cache_) {
-    auto view = registry->view<ChunkMeshState, ChunkBlockSet>();
-    auto& chunk_mesh_state = view.get<ChunkMeshState>(chunk);
-    if(chunk_mesh_state.state == ChunkMeshState::STATE::AVALIBLE) {
+void ChunkSystem::updateMeshes() {
+  entt::registry& registry = *context_.getRegistry();
+  for (const auto& [position, entity] : chunks_) {
+    (void)position;
+    ChunkMeshState& mesh_state = registry.get<ChunkMeshState>(entity);
+    if (mesh_state.state == ChunkMeshState::State::Available) {
       continue;
     }
-    if(chunk_mesh_state.state == ChunkMeshState::STATE::DIRT) {
-      Mesh new_mesh = generateMesh(view.get<ChunkBlockSet>(chunk));
-      auto mesh_view = registry->view<Mesh>();
-      Mesh& mesh = mesh_view.get<Mesh>(chunk);
-      glDeleteBuffers(mesh.VBOs.size(), mesh.VBOs.data());
-      glDeleteVertexArrays(1, &mesh.VAO);
-      mesh = new_mesh;
-      chunk_mesh_state.state = ChunkMeshState::STATE::AVALIBLE;
+
+    const MeshData mesh_data =
+        chunk_mesher_.build(registry.get<ChunkBlockSet>(entity));
+    const Mesh new_mesh = mesh_manager_.upload(mesh_data);
+    if (registry.all_of<Mesh>(entity)) {
+      mesh_manager_.release(registry.get<Mesh>(entity));
+      registry.replace<Mesh>(entity, new_mesh);
+    } else {
+      registry.emplace<Mesh>(entity, new_mesh);
     }
-    if(chunk_mesh_state.state == ChunkMeshState::STATE::UNGENERATED) {
-      Mesh mesh = generateMesh(view.get<ChunkBlockSet>(chunk));
-      registry->emplace<Mesh>(chunk, mesh);
-      chunk_mesh_state.state = ChunkMeshState::STATE::AVALIBLE;
+    mesh_state.state = ChunkMeshState::State::Available;
+  }
+}
+
+std::optional<entt::entity> ChunkSystem::findPlayer() const {
+  using namespace entt::literals;
+
+  entt::registry& registry = *context_.getRegistry();
+  const auto view = registry.view<Tag, Transform>();
+  for (const entt::entity entity : view) {
+    if (view.get<Tag>(entity).id == "player"_hs) {
+      return entity;
     }
   }
+  return std::nullopt;
 }
 
 void ChunkSystem::onPlaceBlock(PlaceBlockEvent event) {
+  (void)event;
   spdlog::info("place");
-  Block block;
-  block.block_type = Block::BlockType::STONE;
-  for(int i = 0; i < 20; i++) {
-    for(int j = 0; j < 20; j++) {
-      for(int k = 0; k < 20; k++) {
-        setBlock(i, k + 20, j, block);
+
+  Block block{.block_type = Block::BlockType::STONE};
+  for (int x = 0; x < 20; ++x) {
+    for (int z = 0; z < 20; ++z) {
+      for (int y = 0; y < 20; ++y) {
+        setBlock(x, y + 20, z, block);
       }
     }
   }
+
   block.block_type = Block::BlockType::AIR;
-  for(int i = 1; i < 19; i++) {
-    for(int j = 1; j < 19; j++) {
-      for(int k = 1; k < 19; k++) {
-        setBlock(i, k + 20, j, block);
+  for (int x = 1; x < 19; ++x) {
+    for (int z = 1; z < 19; ++z) {
+      for (int y = 1; y < 19; ++y) {
+        setBlock(x, y + 20, z, block);
       }
     }
   }

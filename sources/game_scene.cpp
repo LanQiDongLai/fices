@@ -1,17 +1,24 @@
 #include "scenes/game_scene.h"
 
-GameScene::GameScene(Context* context) {
-  using namespace entt::literals;
-  context_ = context;
-  Camera camera{.fov = 45.f,
-                .near = 1.f,
-                .far = 1000.f,
-                .yaw = 45.f,
-                .pitch = 0.f};
-  Transform transform{.x = 0.f, .y = 30.f, .z = 0.f};
-  player_ = new Player(context, camera, transform);
+#include "components/camera.h"
+#include "components/transform.h"
+#include "entities/player.h"
+
+GameScene::GameScene(Context& context) : context_(context) {
+  const Camera camera{.fov = 45.0f,
+                      .near = 1.0f,
+                      .far = 1000.0f,
+                      .yaw = 45.0f,
+                      .pitch = 0.0f};
+  const Transform transform{.x = 0.0f, .y = 30.0f, .z = 0.0f};
+  player_ = createPlayerEntity(*context_.getRegistry(), camera, transform);
 }
 
-GameScene::~GameScene() { delete player_; }
+GameScene::~GameScene() {
+  entt::registry& registry = *context_.getRegistry();
+  if (registry.valid(player_)) {
+    registry.destroy(player_);
+  }
+}
 
-void GameScene::update(double delta_time) {}
+void GameScene::update(double delta_time) { (void)delta_time; }

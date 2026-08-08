@@ -1,30 +1,27 @@
 #include "game_app.h"
 
-GameApp::GameApp() {
-  entt::dispatcher* dispatcher = new entt::dispatcher;
-  entt::registry* registry = new entt::registry;
-  Window* window = new Window(800, 800, "Fices");
-  context_ = new Context(window, registry, dispatcher);
-  is_running_ = true;
+GameApp::GameApp()
+    : window_(800, 800, "Fices"),
+      context_(window_, registry_, dispatcher_),
+      terrain_generator_(123),
+      render_system_(context_, mesh_manager_),
+      input_system_(&context_),
+      player_system_(&context_),
+      chunk_system_(context_, terrain_generator_, chunk_mesher_, mesh_manager_),
+      debug_system_(&context_),
+      scene_(context_),
+      last_frame_time_(std::chrono::high_resolution_clock::now()) {}
 
-  render_system_ = new RenderSystem(context_);
-  input_system_ = new InputSystem(context_);
-  chunk_system_ = new ChunkSystem(context_);
-  player_system_ = new PlayerSystem(context_);
-  debug_system_ = new DebugSystem(context_);
-
-  scene_ = new GameScene(context_);
-
-  last_frame_time_ = std::chrono::high_resolution_clock::now();
+GameApp::~GameApp() {
+  dispatcher_.sink<GameQuitEvent>().disconnect(this);
+  window_.close();
 }
 
 void GameApp::initialize() {
-  context_->getDispatcher()
-      ->sink<GameQuitEvent>()
-      .connect<&GameApp::onCloseWindow>(this);
-  render_system_->initialize();
-  player_system_->initialize();
-  chunk_system_->initialize();
+  dispatcher_.sink<GameQuitEvent>().connect<&GameApp::onCloseWindow>(this);
+  render_system_.initialize();
+  player_system_.initialize();
+  chunk_system_.initialize();
 }
 
 void GameApp::run() {
@@ -34,30 +31,24 @@ void GameApp::run() {
 }
 
 void GameApp::update() {
-  std::chrono::time_point current = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+  const auto current = std::chrono::high_resolution_clock::now();
+  const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
       current - last_frame_time_);
   last_frame_time_ = current;
+  const double delta_time = static_cast<double>(duration.count());
 
-  render_system_->update(duration.count());
-  input_system_->update(duration.count());
-  player_system_->update(duration.count());
-  chunk_system_->update(duration.count());
-  debug_system_->update(duration.count());
+  input_system_.update(delta_time);
+  player_system_.update(delta_time);
+  chunk_system_.update(delta_time);
+  scene_.update(delta_time);
+  debug_system_.update(delta_time);
+  dispatcher_.update();
 
-  scene_->update(duration.count());
-
-  context_->getDispatcher()->update();
-  context_->getWindow()->present();
+  render_system_.update(delta_time);
+  window_.present();
 }
 
 void GameApp::onCloseWindow() {
   is_running_ = false;
-}
-
-GameApp::~GameApp() {
-  context_->getWindow()->close();
-  delete context_;
-  delete render_system_;
-  delete input_system_;
+  window_.close();
 }

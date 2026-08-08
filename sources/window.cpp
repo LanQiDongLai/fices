@@ -28,8 +28,8 @@ Window::Window(int width, int height, std::string_view title) {
 }
 
 Window::~Window() {
-  SDL_DestroyWindow(window_);
   SDL_GL_DestroyContext(context_);
+  SDL_DestroyWindow(window_);
   SDL_Quit();
 }
 

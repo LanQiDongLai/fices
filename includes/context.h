@@ -1,17 +1,17 @@
 #pragma once
+
 #include <entt/entt.hpp>
 
 #include "window/window.h"
 
 class Context {
  public:
-  Context(Window* window, entt::registry* registry,
-          entt::dispatcher* dispatcher);
-  ~Context();
+  Context(Window& window, entt::registry& registry,
+          entt::dispatcher& dispatcher);
 
-  entt::registry* getRegistry();
-  entt::dispatcher* getDispatcher();
-  Window* getWindow();
+  [[nodiscard]] entt::registry* getRegistry();
+  [[nodiscard]] entt::dispatcher* getDispatcher();
+  [[nodiscard]] Window* getWindow();
 
  private:
   Window* window_;

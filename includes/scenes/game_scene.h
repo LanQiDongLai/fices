@@ -1,17 +1,21 @@
 #pragma once
-#include "scenes/scene.h"
-#include "entities/player.h"
+
+#include <entt/entt.hpp>
+
 #include "context.h"
+#include "scenes/scene.h"
 
 class GameScene : public Scene {
+ public:
+  explicit GameScene(Context& context);
+  ~GameScene() override;
+
   GameScene(const GameScene&) = delete;
   GameScene& operator=(const GameScene&) = delete;
 
- public:
-  GameScene(Context *context);
-  ~GameScene();
-  void update(double delta);
+  void update(double delta) override;
+
  private:
-  Context* context_;
-  Player* player_;
+  Context& context_;
+  entt::entity player_;
 };
